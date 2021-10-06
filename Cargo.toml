@@ -6,6 +6,7 @@ edition = "2018"
 description = "Crate for loading Tiled maps"
 readme = "README.md"
 license = "Unlicense"
+repository = "https://github.com/texel-sensei/tego"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

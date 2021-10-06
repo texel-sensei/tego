@@ -3,6 +3,8 @@ name = "tego"
 version = "0.1.0"
 authors = ["texel <texelsensei@posteo.net>"]
 edition = "2018"
+description = "Crate for loading Tiled maps"
+readme = "README.md"
 license = "Unlicense"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

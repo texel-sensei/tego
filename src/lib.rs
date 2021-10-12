@@ -6,8 +6,9 @@ use thiserror::Error;
 
 use roxmltree::Document;
 
+/// Version number consisting out of a MAJOR and MINOR version number, followed by an optional PATCH
 #[derive(Debug, PartialEq, Eq)]
-pub struct Version(u32,u32,Option<u32>);
+pub struct Version(pub u32,pub u32, pub Option<u32>);
 
 impl std::str::FromStr for Version {
     type Err = MapError;

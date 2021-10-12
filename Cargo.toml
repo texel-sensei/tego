@@ -1,12 +1,18 @@
 [package]
 name = "tego"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["texel <texelsensei@posteo.net>"]
 edition = "2018"
 description = "Crate for loading Tiled maps"
 readme = "README.md"
 license = "Unlicense"
 repository = "https://github.com/texel-sensei/tego"
+
+# Exclude example data and tests
+exclude = [
+	"example-maps/",
+	"tests",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

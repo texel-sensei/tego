@@ -58,6 +58,22 @@ pub enum Orientation {
     Hexagonal,
 }
 
+impl std::str::FromStr for Orientation {
+    type Err = MapError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use Orientation::*;
+        match s {
+            "orthogonal" => Ok(Orthogonal),
+            "isometric" => Ok(Isometric),
+            "staggered" => Ok(Staggered),
+            "hexagonal" => Ok(Hexagonal),
+            _ => Err(MapError::ParseError(format!("Invalid orientation '{}'", s).into()))
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum Renderorder {
     RightDown,
     RightUp,
@@ -65,10 +81,37 @@ pub enum Renderorder {
     LeftUp,
 }
 
+impl std::str::FromStr for Renderorder {
+    type Err = MapError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use Renderorder::*;
+        match s {
+            "right-down" => Ok(RightDown),
+            "right-up" => Ok(RightUp),
+            "left-down" => Ok(LeftDown),
+            "left-up" => Ok(LeftUp),
+            _ => Err(MapError::ParseError(format!("Invalid render order '{}'", s).into()))
+        }
+    }
+}
+
+impl Default for Renderorder {
+    fn default() -> Self {
+        Renderorder::RightDown
+    }
+}
+
 
 pub struct Map {
     pub version: Version,
     pub editor_version: Option<Version>,
+    pub orientation: Orientation,
+    pub renderorder: Renderorder,
+    pub width: usize,
+    pub height: usize,
+    pub tilewidth: usize,
+    pub tileheight: usize,
 }
 
 impl Map {
@@ -102,13 +145,54 @@ impl Map {
             }})
         };
 
+        let renderorder = if let Some(attr) = map_node.attribute("renderorder") {
+            attr.parse()?
+        } else { Renderorder::default() };
+
         let mut map = Map {
             version: map_attr("version")?.parse()?,
             editor_version: None,
+            orientation: map_attr("orientation")?.parse()?,
+            renderorder,
+            width: map_attr("width")?.parse()?,
+            height: map_attr("height")?.parse()?,
+            tilewidth: map_attr("tilewidth")?.parse()?,
+            tileheight: map_attr("tileheight")?.parse()?,
         };
         if map_node.attribute("tiledversion").is_some() {
             map.editor_version = Some(map_attr("tiledversion")?.parse()?);
         }
         Ok(map)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_version_parsing() -> Result<(), MapError> {
+        assert_eq!("1.0".parse::<Version>()?, Version(1,0,None));
+        assert_eq!("4.5.3".parse::<Version>()?, Version(4,5,Some(3)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_default_render_order() -> Result<(), MapError> {
+        // explicitly no renderorder
+        let map_xml = r#"
+            <map
+                version="1.5"
+                orientation="orthogonal"
+                width="1"
+                height="1"
+                tilewidth="1"
+                tileheight="1"
+            />
+        "#;
+
+        let map = Map::from_xml_str(&map_xml)?;
+        assert_eq!(map.renderorder, Renderorder::RightDown);
+        Ok(())
     }
 }

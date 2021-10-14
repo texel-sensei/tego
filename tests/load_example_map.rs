@@ -8,4 +8,5 @@ fn load_defaul_example_map() {
 
     assert_eq!(map.version, Version(1,5,None));
     assert_eq!(map.editor_version, Some(Version(1, 7, Some(2))));
+    assert_eq!(map.layers.len(), 1);
 }

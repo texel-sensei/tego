@@ -20,3 +20,4 @@ exclude = [
 roxmltree = "0.14.1"
 libflate = "1.1.1"
 thiserror = "1.0"
+base64 = "0.13"

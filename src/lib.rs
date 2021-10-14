@@ -3,6 +3,7 @@
 use std::{fs::File, io::Read};
 
 use thiserror::Error;
+use base64;
 
 use roxmltree::Document;
 
@@ -102,6 +103,83 @@ impl Default for Renderorder {
     }
 }
 
+/// Global Tile ID
+/// A GID acts as an index into any tileset referenced in the map
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GID(u32);
+
+pub struct TileLayer {
+    pub id: usize,
+    pub name: String,
+    pub width: usize,
+    pub height: usize,
+    pub tiles: Vec<GID>
+}
+
+impl TileLayer {
+
+    fn parse_data(data_node: &roxmltree::Node) -> Result<Vec<GID>, MapError> {
+        assert_eq!(data_node.tag_name().name(), "data");
+
+        match data_node.attribute("encoding") {
+            None => todo!{"Tag based tile data loading not yet implemented"},
+            Some("csv") => todo!{"Implement csv parsing"},
+            Some("base64") => {
+                // helper macro for decoding compressed data using libflate
+                macro_rules! decode_with {
+                    ($input:ident $compression:ident) => {{
+                        use std::io::Read;
+                        let mut decoded = Vec::new();
+                        let mut decoder = libflate::$compression::Decoder::new(&$input[..])?;
+                        decoder.read_to_end(&mut decoded)?;
+                        decoded
+                    }};
+                }
+
+                let raw_bytes = base64::decode(data_node.text().unwrap_or_default().trim())
+                    .map_err(|e| MapError::ParseError(Box::new(e)))?
+                ;
+                let raw_bytes = match data_node.attribute("compression") {
+                    None => raw_bytes,
+                    Some("zlib") => decode_with!(raw_bytes zlib),
+                    Some("gzip") => decode_with!(raw_bytes gzip),
+                    Some(compression) => Err(MapError::StructureError{
+                        tag: data_node.tag_name().name().to_string(),
+                        msg: format!("Unsupported data compression '{}'", compression)
+                    })?,
+                };
+
+                const BYTE_SIZE: usize = std::mem::size_of::<u32>();
+                assert!(raw_bytes.len() % BYTE_SIZE == 0);
+
+                // convert chunk of bytes into GIDS (via u32)
+                use std::convert::TryInto;
+                Ok(raw_bytes.chunks_exact(BYTE_SIZE).map(|c| GID(u32::from_le_bytes(c.try_into().unwrap()))).collect())
+            },
+            Some(encoding) => Err(MapError::StructureError{
+                tag: data_node.tag_name().name().to_string(),
+                msg: format!("Unsupported data encoding '{}'", encoding)
+            })
+        }
+    }
+
+    pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self,MapError> {
+        let map_attr = |name: &str| {
+            tmx.attribute(name).ok_or_else(||{MapError::StructureError{
+                tag: tmx.tag_name().name().to_string(),
+                msg: format!("Required attribute '{}' missing", name)
+            }})
+        };
+        Ok(Self{
+            id: map_attr("id")?.parse()?,
+            name: tmx.attribute("name").unwrap_or_default().to_string(),
+            width: map_attr("width")?.parse()?,
+            height: map_attr("height")?.parse()?,
+            tiles: Self::parse_data(&tmx.children().find(|n| n.tag_name().name() == "data").unwrap())?,
+        })
+    }
+}
+
 
 pub struct Map {
     pub version: Version,
@@ -112,6 +190,7 @@ pub struct Map {
     pub height: usize,
     pub tilewidth: usize,
     pub tileheight: usize,
+    pub layers: Vec<TileLayer>,
 }
 
 impl Map {
@@ -158,6 +237,9 @@ impl Map {
             height: map_attr("height")?.parse()?,
             tilewidth: map_attr("tilewidth")?.parse()?,
             tileheight: map_attr("tileheight")?.parse()?,
+            layers:
+                map_node.children().filter(|n| n.tag_name().name() == "layer")
+                .map(|n| TileLayer::from_xml(&n)).collect::<Result<Vec<_>,_>>()?
         };
         if map_node.attribute("tiledversion").is_some() {
             map.editor_version = Some(map_attr("tiledversion")?.parse()?);

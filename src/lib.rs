@@ -37,7 +37,6 @@ impl std::str::FromStr for Version {
     }
 }
 
-
 pub enum Orientation {
     Orthogonal,
     Isometric,
@@ -91,8 +90,106 @@ impl Default for Renderorder {
 
 /// Global Tile ID
 /// A GID acts as an index into any tileset referenced in the map
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub struct GID(u32);
+
+impl std::str::FromStr for GID {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(GID(s.parse()?))
+    }
+}
+
+fn attribute_or_default<T>(node: &roxmltree::Node, name: &str) -> Result<T>
+    where T: Default + std::str::FromStr,
+          T::Err: std::error::Error + 'static
+{
+    match node.attribute(name) {
+        None => Ok(T::default()),
+        Some(text) => text.parse().map_err(|e: T::Err| Error::ParseError(Box::new(e)))
+    }
+}
+
+pub struct TileSet {
+    pub firstgid: GID,
+    pub name: String,
+    pub tilewidth: usize,
+    pub tileheight: usize,
+    pub spacing: usize,
+    pub margin: usize,
+    pub tilecount: usize,
+    pub columns: usize,
+    // TODO(texel, 2021-10-15): somehow handle the image data
+}
+
+impl TileSet {
+    pub fn from_xml(node: &roxmltree::Node) -> Result<Self> {
+        let map_attr = |name: &str| {
+            node.attribute(name).ok_or_else(||{Error::StructureError{
+                tag: node.tag_name().name().to_string(),
+                msg: format!("Required attribute '{}' missing", name)
+            }})
+        };
+
+        if let Some(source) = node.attribute("source") {
+            return Err(Error::UnsupportedFeature(format!("Extern tileset at: {}", source)));
+        }
+
+        Ok(Self{
+            firstgid: map_attr("firstgid")?.parse()?,
+            name: map_attr("name")?.into(),
+            tilewidth: map_attr("tilewidth")?.parse()?,
+            tileheight: map_attr("tileheight")?.parse()?,
+            spacing: attribute_or_default(node, "spacing")?,
+            margin: attribute_or_default(node, "margin")?,
+            tilecount: map_attr("tilecount")?.parse()?,
+            columns: map_attr("columns")?.parse()?,
+        })
+    }
+}
+
+/// Helper function to read the binary data contained in a "data" tag
+/// # Panics
+/// The given node has no "encoding" attribute
+fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
+    assert_eq!(data_node.tag_name().name(), "data");
+    assert!(data_node.attribute("encoding").is_some());
+
+    match data_node.attribute("encoding").unwrap() {
+        "csv" => todo!{"Implement csv parsing"},
+        "base64" => {
+            // helper macro for decoding compressed data using libflate
+            macro_rules! decode_with {
+                ($input:ident $compression:ident) => {{
+                    use std::io::Read;
+                    let mut decoded = Vec::new();
+                    let mut decoder = libflate::$compression::Decoder::new(&$input[..])?;
+                    decoder.read_to_end(&mut decoded)?;
+                    decoded
+                }};
+            }
+
+            let raw_bytes = base64::decode(data_node.text().unwrap_or_default().trim())
+                .map_err(|e| Error::ParseError(Box::new(e)))?
+                ;
+            let raw_bytes = match data_node.attribute("compression") {
+                None => raw_bytes,
+                Some("zlib") => decode_with!(raw_bytes zlib),
+                Some("gzip") => decode_with!(raw_bytes gzip),
+                Some(compression) => Err(Error::StructureError{
+                    tag: data_node.tag_name().name().to_string(),
+                    msg: format!("Unsupported data compression '{}'", compression)
+                })?,
+            };
+            Ok(raw_bytes)
+        },
+        encoding => Err(Error::StructureError{
+            tag: data_node.tag_name().name().to_string(),
+            msg: format!("Unsupported data encoding '{}'", encoding)
+        })
+    }
+}
 
 pub struct TileLayer {
     pub id: usize,
@@ -109,31 +206,8 @@ impl TileLayer {
 
         match data_node.attribute("encoding") {
             None => todo!{"Tag based tile data loading not yet implemented"},
-            Some("csv") => todo!{"Implement csv parsing"},
-            Some("base64") => {
-                // helper macro for decoding compressed data using libflate
-                macro_rules! decode_with {
-                    ($input:ident $compression:ident) => {{
-                        use std::io::Read;
-                        let mut decoded = Vec::new();
-                        let mut decoder = libflate::$compression::Decoder::new(&$input[..])?;
-                        decoder.read_to_end(&mut decoded)?;
-                        decoded
-                    }};
-                }
-
-                let raw_bytes = base64::decode(data_node.text().unwrap_or_default().trim())
-                    .map_err(|e| Error::ParseError(Box::new(e)))?
-                ;
-                let raw_bytes = match data_node.attribute("compression") {
-                    None => raw_bytes,
-                    Some("zlib") => decode_with!(raw_bytes zlib),
-                    Some("gzip") => decode_with!(raw_bytes gzip),
-                    Some(compression) => Err(Error::StructureError{
-                        tag: data_node.tag_name().name().to_string(),
-                        msg: format!("Unsupported data compression '{}'", compression)
-                    })?,
-                };
+            Some(_) => {
+                let raw_bytes = read_data_tag(data_node)?;
 
                 const BYTE_SIZE: usize = std::mem::size_of::<u32>();
                 assert!(raw_bytes.len() % BYTE_SIZE == 0);
@@ -141,11 +215,7 @@ impl TileLayer {
                 // convert chunk of bytes into GIDS (via u32)
                 use std::convert::TryInto;
                 Ok(raw_bytes.chunks_exact(BYTE_SIZE).map(|c| GID(u32::from_le_bytes(c.try_into().unwrap()))).collect())
-            },
-            Some(encoding) => Err(Error::StructureError{
-                tag: data_node.tag_name().name().to_string(),
-                msg: format!("Unsupported data encoding '{}'", encoding)
-            })
+            }
         }
     }
 
@@ -176,6 +246,7 @@ pub struct Map {
     pub height: usize,
     pub tilewidth: usize,
     pub tileheight: usize,
+    pub tilesets: Vec<TileSet>,
     pub layers: Vec<TileLayer>,
 }
 
@@ -210,19 +281,19 @@ impl Map {
             }})
         };
 
-        let renderorder = if let Some(attr) = map_node.attribute("renderorder") {
-            attr.parse()?
-        } else { Renderorder::default() };
+        let tilesets = map_node.children().filter(|n| n.tag_name().name() == "tileset")
+            .map(|n| TileSet::from_xml(&n)).collect::<Result<Vec<_>>>()?;
 
         let mut map = Map {
             version: map_attr("version")?.parse()?,
             editor_version: None,
             orientation: map_attr("orientation")?.parse()?,
-            renderorder,
+            renderorder: attribute_or_default(&map_node, "renderorder")?,
             width: map_attr("width")?.parse()?,
             height: map_attr("height")?.parse()?,
             tilewidth: map_attr("tilewidth")?.parse()?,
             tileheight: map_attr("tileheight")?.parse()?,
+            tilesets,
             layers:
                 map_node.children().filter(|n| n.tag_name().name() == "layer")
                 .map(|n| TileLayer::from_xml(&n)).collect::<Result<Vec<_>>>()?

@@ -15,6 +15,10 @@ pub enum Error {
     /// A general IO error, e.g. opening a file failed
     #[error(transparent)]
     IO(#[from] std::io::Error),
+
+    /// Map uses features that are not (yet) supported
+    #[error("Feature not supported: {0}")]
+    UnsupportedFeature(String)
 }
 
 impl From<roxmltree::Error> for Error {

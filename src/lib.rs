@@ -2,22 +2,31 @@
 
 use std::{fs::File, io::Read};
 
-use thiserror::Error;
 use base64;
-
 use roxmltree::Document;
+
+mod errors;
+pub use errors::Error;
+pub use errors::Result;
 
 /// Version number consisting out of a MAJOR and MINOR version number, followed by an optional PATCH
 #[derive(Debug, PartialEq, Eq)]
-pub struct Version(pub u32,pub u32, pub Option<u32>);
+pub struct Version(
+    /// Major version
+    pub u32,
+    /// Minor version
+    pub u32,
+    /// Patch version
+    pub Option<u32>
+);
 
 impl std::str::FromStr for Version {
-    type Err = MapError;
+    type Err = crate::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         let mut items = s.split('.');
 
-        use MapError::ParseError;
+        use Error::ParseError;
         let major = items.next().ok_or(ParseError("Major version is required but missing".into()))?.parse()?;
         let minor = items.next().ok_or(ParseError("Minor version is required but missing".into()))?.parse()?;
         let patch = if let Some(content) = items.next() {
@@ -28,29 +37,6 @@ impl std::str::FromStr for Version {
     }
 }
 
-#[derive(Error, Debug)]
-pub enum MapError {
-    #[error("")]
-    StructureError{ tag: String, msg: String },
-
-    #[error(transparent)]
-    ParseError(Box<dyn std::error::Error>),
-
-    #[error(transparent)]
-    IO(#[from] std::io::Error),
-}
-
-impl From<roxmltree::Error> for MapError {
-    fn from(e: roxmltree::Error) -> Self {
-        MapError::ParseError(Box::new(e))
-    }
-}
-
-impl From<std::num::ParseIntError> for MapError {
-    fn from(e: std::num::ParseIntError) -> Self {
-        MapError::ParseError(Box::new(e))
-    }
-}
 
 pub enum Orientation {
     Orthogonal,
@@ -60,16 +46,16 @@ pub enum Orientation {
 }
 
 impl std::str::FromStr for Orientation {
-    type Err = MapError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         use Orientation::*;
         match s {
             "orthogonal" => Ok(Orthogonal),
             "isometric" => Ok(Isometric),
             "staggered" => Ok(Staggered),
             "hexagonal" => Ok(Hexagonal),
-            _ => Err(MapError::ParseError(format!("Invalid orientation '{}'", s).into()))
+            _ => Err(Error::ParseError(format!("Invalid orientation '{}'", s).into()))
         }
     }
 }
@@ -83,16 +69,16 @@ pub enum Renderorder {
 }
 
 impl std::str::FromStr for Renderorder {
-    type Err = MapError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         use Renderorder::*;
         match s {
             "right-down" => Ok(RightDown),
             "right-up" => Ok(RightUp),
             "left-down" => Ok(LeftDown),
             "left-up" => Ok(LeftUp),
-            _ => Err(MapError::ParseError(format!("Invalid render order '{}'", s).into()))
+            _ => Err(Error::ParseError(format!("Invalid render order '{}'", s).into()))
         }
     }
 }
@@ -118,7 +104,7 @@ pub struct TileLayer {
 
 impl TileLayer {
 
-    fn parse_data(data_node: &roxmltree::Node) -> Result<Vec<GID>, MapError> {
+    fn parse_data(data_node: &roxmltree::Node) -> Result<Vec<GID>> {
         assert_eq!(data_node.tag_name().name(), "data");
 
         match data_node.attribute("encoding") {
@@ -137,13 +123,13 @@ impl TileLayer {
                 }
 
                 let raw_bytes = base64::decode(data_node.text().unwrap_or_default().trim())
-                    .map_err(|e| MapError::ParseError(Box::new(e)))?
+                    .map_err(|e| Error::ParseError(Box::new(e)))?
                 ;
                 let raw_bytes = match data_node.attribute("compression") {
                     None => raw_bytes,
                     Some("zlib") => decode_with!(raw_bytes zlib),
                     Some("gzip") => decode_with!(raw_bytes gzip),
-                    Some(compression) => Err(MapError::StructureError{
+                    Some(compression) => Err(Error::StructureError{
                         tag: data_node.tag_name().name().to_string(),
                         msg: format!("Unsupported data compression '{}'", compression)
                     })?,
@@ -156,16 +142,16 @@ impl TileLayer {
                 use std::convert::TryInto;
                 Ok(raw_bytes.chunks_exact(BYTE_SIZE).map(|c| GID(u32::from_le_bytes(c.try_into().unwrap()))).collect())
             },
-            Some(encoding) => Err(MapError::StructureError{
+            Some(encoding) => Err(Error::StructureError{
                 tag: data_node.tag_name().name().to_string(),
                 msg: format!("Unsupported data encoding '{}'", encoding)
             })
         }
     }
 
-    pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self,MapError> {
+    pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         let map_attr = |name: &str| {
-            tmx.attribute(name).ok_or_else(||{MapError::StructureError{
+            tmx.attribute(name).ok_or_else(||{Error::StructureError{
                 tag: tmx.tag_name().name().to_string(),
                 msg: format!("Required attribute '{}' missing", name)
             }})
@@ -194,7 +180,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn from_file(path: &std::path::Path) -> Result<Self, MapError> {
+    pub fn from_file(path: &std::path::Path) -> Result<Self> {
         let mut file = File::open(path)?;
 
         let mut file_xml = String::new();
@@ -205,20 +191,20 @@ impl Map {
     }
 
     /// Parse a map from xml data
-    pub fn from_xml_str(tmx: &str) -> Result<Self, MapError> {
+    pub fn from_xml_str(tmx: &str) -> Result<Self> {
         let document = Document::parse(&tmx)?;
 
         let map_node = document.root_element();
 
         if map_node.tag_name().name() != "map" {
-            return Err(MapError::StructureError{
+            return Err(Error::StructureError{
                 tag: map_node.tag_name().name().to_string(),
                 msg: format!("Expected tag 'map' at root level, got '{}'.", map_node.tag_name().name())
             });
         }
 
         let map_attr = |name: &str| {
-            map_node.attribute(name).ok_or_else(||{MapError::StructureError{
+            map_node.attribute(name).ok_or_else(||{Error::StructureError{
                 tag: map_node.tag_name().name().to_string(),
                 msg: format!("Required attribute '{}' missing", name)
             }})
@@ -239,7 +225,7 @@ impl Map {
             tileheight: map_attr("tileheight")?.parse()?,
             layers:
                 map_node.children().filter(|n| n.tag_name().name() == "layer")
-                .map(|n| TileLayer::from_xml(&n)).collect::<Result<Vec<_>,_>>()?
+                .map(|n| TileLayer::from_xml(&n)).collect::<Result<Vec<_>>>()?
         };
         if map_node.attribute("tiledversion").is_some() {
             map.editor_version = Some(map_attr("tiledversion")?.parse()?);
@@ -253,14 +239,14 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_version_parsing() -> Result<(), MapError> {
+    fn test_version_parsing() -> Result<()> {
         assert_eq!("1.0".parse::<Version>()?, Version(1,0,None));
         assert_eq!("4.5.3".parse::<Version>()?, Version(4,5,Some(3)));
         Ok(())
     }
 
     #[test]
-    fn test_default_render_order() -> Result<(), MapError> {
+    fn test_default_render_order() -> Result<()> {
         // explicitly no renderorder
         let map_xml = r#"
             <map

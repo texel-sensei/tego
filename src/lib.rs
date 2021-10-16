@@ -59,7 +59,7 @@ impl std::str::FromStr for Orientation {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Renderorder {
     RightDown,
     RightUp,
@@ -92,6 +92,13 @@ impl Default for Renderorder {
 /// A GID acts as an index into any tileset referenced in the map
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub struct GID(u32);
+
+impl GID {
+    /// Return whether this GID refers to an empty space in the layer (true) or a tile (false).
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+}
 
 impl std::str::FromStr for GID {
     type Err = Error;
@@ -191,6 +198,41 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
     }
 }
 
+pub struct TileIterator<'map, 'layer> {
+    map: &'map Map,
+    layer: &'layer TileLayer,
+    x: usize,
+    y: usize,
+}
+
+impl<'map, 'layer> TileIterator<'map, 'layer> {
+    pub(crate) fn new(map: &'map Map, layer: &'layer TileLayer) -> Self { Self { map, layer, x: 0, y: 0 } }
+}
+
+impl<'a,'b> Iterator for TileIterator<'a,'b> {
+    type Item = (usize, usize, GID);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        assert_eq!(
+            self.map.renderorder,
+            Renderorder::RightDown,
+            "Only right-down renderorder is implemented right now"
+        );
+        if self.x >= self.layer.width {
+            self.x = 0;
+            self.y += 1;
+        }
+        if self.y >= self.layer.height {
+            return None;
+        }
+
+        let idx = self.x + self.layer.width * self.y;
+        let element = Some((self.x, self.y, self.layer.tiles[idx]));
+        self.x += 1;
+        element
+    }
+}
+
 pub struct TileLayer {
     pub id: usize,
     pub name: String,
@@ -233,6 +275,19 @@ impl TileLayer {
             height: map_attr("height")?.parse()?,
             tiles: Self::parse_data(&tmx.children().find(|n| n.tag_name().name() == "data").unwrap())?,
         })
+    }
+
+
+    /// Iterate over the tiles inside of this layer in the order in which they would be rendered.
+    /// See [Map::renderorder]. This iterator yields the GID and xy coordinates of the tiles in the
+    /// layer, with an empty GID ([GID::is_empty()]) for empty tiles.
+    ///
+    /// # Panics
+    ///
+    /// At the moment, this function is only implemented for a renderorder of RightDown.
+    /// Other render orders result in a panic.
+    pub fn tiles_in_renderorder<'a, 'b>(&'b self, map: &'a Map) -> TileIterator<'a, 'b> {
+        TileIterator::new(map, &self)
     }
 }
 

@@ -108,6 +108,16 @@ impl std::str::FromStr for GID {
     }
 }
 
+fn attribute_or<T>(node: &roxmltree::Node, name: &str, alternative: T) -> Result<T>
+    where T: Copy + std::str::FromStr,
+          T::Err: std::error::Error + 'static
+{
+    match node.attribute(name) {
+        None => Ok(alternative),
+        Some(text) => text.parse().map_err(|e: T::Err| Error::ParseError(Box::new(e)))
+    }
+}
+
 fn attribute_or_default<T>(node: &roxmltree::Node, name: &str) -> Result<T>
     where T: Default + std::str::FromStr,
           T::Err: std::error::Error + 'static
@@ -198,6 +208,24 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
     }
 }
 
+/// This enum contains the different types of layers that can be found in a map
+pub enum Layer{
+    /// A layer containing a grid of tiles
+    Tile(TileLayer),
+    Group(GroupLayer),
+}
+
+impl Layer {
+    pub fn try_from_xml(node: &roxmltree::Node) -> Option<Result<Self>> {
+        use Layer::*;
+        match node.tag_name().name() {
+            "layer" => Some(TileLayer::from_xml(node).map(|l| Tile(l))),
+            "group" => Some(GroupLayer::from_xml(node).map(|l| Group(l))),
+            _ => None,
+        }
+    }
+}
+
 pub struct TileIterator<'map, 'layer> {
     map: &'map Map,
     layer: &'layer TileLayer,
@@ -230,6 +258,43 @@ impl<'a,'b> Iterator for TileIterator<'a,'b> {
         let element = Some((self.x, self.y, self.layer.tiles[idx]));
         self.x += 1;
         element
+    }
+}
+
+/// A layer to group multiple sub-layers
+pub struct GroupLayer {
+    pub id: usize,
+    pub name: String,
+    pub offsetx: usize,
+    pub offsety: usize,
+    pub opacity: f32,
+    pub visible: bool,
+    // pub tintcolor: TODO
+    pub content: Vec<Layer>
+}
+
+impl GroupLayer {
+    /// Load a group layer from a TMX "group" node
+    pub fn from_xml(node: &roxmltree::Node) -> Result<Self> {
+        assert_eq!(node.tag_name().name(), "group");
+        let map_attr = |name: &str| {
+            node.attribute(name).ok_or_else(||{Error::StructureError{
+                tag: node.tag_name().name().to_string(),
+                msg: format!("Required attribute '{}' missing", name)
+            }})
+        };
+
+        let content = node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>();
+
+        Ok(Self{
+            id: map_attr("id")?.parse()?,
+            name: node.attribute("name").unwrap_or_default().to_string(),
+            offsetx: attribute_or_default(node, "offsetx")?,
+            offsety: attribute_or_default(node, "offsety")?,
+            opacity: attribute_or(node, "opacity", 1.)?,
+            visible: attribute_or(node, "opacity", true)?,
+            content: content?,
+        })
     }
 }
 
@@ -302,7 +367,7 @@ pub struct Map {
     pub tilewidth: usize,
     pub tileheight: usize,
     pub tilesets: Vec<TileSet>,
-    pub layers: Vec<TileLayer>,
+    pub layers: Vec<Layer>,
 }
 
 impl Map {
@@ -350,8 +415,7 @@ impl Map {
             tileheight: map_attr("tileheight")?.parse()?,
             tilesets,
             layers:
-                map_node.children().filter(|n| n.tag_name().name() == "layer")
-                .map(|n| TileLayer::from_xml(&n)).collect::<Result<Vec<_>>>()?
+                map_node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>()?
         };
         if map_node.attribute("tiledversion").is_some() {
             map.editor_version = Some(map_attr("tiledversion")?.parse()?);

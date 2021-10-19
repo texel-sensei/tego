@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="1">
+ <tileset firstgid="1" name="tiles" tilewidth="16" tileheight="16" tilecount="256" columns="16">
+  <image source="tiles.png" trans="ff00ff" width="256" height="256"/>
+ </tileset>
+ <layer id="1" name="Ground" width="10" height="10">
+  <data encoding="base64" compression="zlib">
+   eJxjYBgFlABGIjETkRgABbQAHw==
+  </data>
+ </layer>
+ <group id="2" name="Objects">
+  <group id="4" name="Goodies">
+   <layer id="5" name="Q-Blocks" width="10" height="10">
+    <data encoding="base64" compression="zlib">
+   eJxjYBj8gG2gHUBHAAAHGAAH
+  </data>
+   </layer>
+   <layer id="6" name="Magic" width="10" height="10">
+    <data encoding="base64" compression="zlib">
+   eJxjZmBgYCYCjwL6AAAuVAAf
+  </data>
+   </layer>
+  </group>
+  <layer id="7" name="Pipe" width="10" height="10">
+   <data encoding="base64" compression="zlib">
+   eJyTZmBgkCWAxYFYiIEwIEbNKMAPANbLAT8=
+  </data>
+  </layer>
+  <layer id="3" name="Doors" width="10" height="10">
+   <data encoding="base64" compression="zlib">
+   eJxjYBgFyICFSHWsNLIfAAVIAAo=
+  </data>
+  </layer>
+ </group>
+</map>

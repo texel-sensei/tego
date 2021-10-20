@@ -366,7 +366,7 @@ impl TileLayer {
 
     /// Iterate over the tiles inside of this layer in the order in which they would be rendered.
     /// See [Map::renderorder]. This iterator yields the GID and xy coordinates of the tiles in the
-    /// layer, with an empty GID ([GID::is_empty()]) for empty tiles.
+    /// layer, with a None GID for empty tiles.
     ///
     /// # Panics
     ///

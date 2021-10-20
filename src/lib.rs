@@ -1,11 +1,13 @@
 //! Test
 
 use std::{fs::File, io::Read};
+use core::num::NonZeroU32;
 
 use base64;
 use roxmltree::Document;
 
 mod errors;
+mod resource_manager;
 pub use errors::Error;
 pub use errors::Result;
 
@@ -91,14 +93,8 @@ impl Default for Renderorder {
 /// Global Tile ID
 /// A GID acts as an index into any tileset referenced in the map
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-pub struct GID(u32);
-
-impl GID {
-    /// Return whether this GID refers to an empty space in the layer (true) or a tile (false).
-    pub fn is_empty(&self) -> bool {
-        self.0 == 0
-    }
-}
+#[repr(transparent)]
+pub struct GID(NonZeroU32);
 
 impl std::str::FromStr for GID {
     type Err = Error;
@@ -238,7 +234,7 @@ impl<'map, 'layer> TileIterator<'map, 'layer> {
 }
 
 impl<'a,'b> Iterator for TileIterator<'a,'b> {
-    type Item = (usize, usize, GID);
+    type Item = (usize, usize, Option<GID>);
 
     fn next(&mut self) -> Option<Self::Item> {
         assert_eq!(
@@ -303,12 +299,12 @@ pub struct TileLayer {
     pub name: String,
     pub width: usize,
     pub height: usize,
-    pub tiles: Vec<GID>
+    pub tiles: Vec<Option<GID>>
 }
 
 impl TileLayer {
 
-    fn parse_data(data_node: &roxmltree::Node) -> Result<Vec<GID>> {
+    fn parse_data(data_node: &roxmltree::Node) -> Result<Vec<Option<GID>>> {
         assert_eq!(data_node.tag_name().name(), "data");
 
         match data_node.attribute("encoding") {
@@ -321,7 +317,11 @@ impl TileLayer {
 
                 // convert chunk of bytes into GIDS (via u32)
                 use std::convert::TryInto;
-                Ok(raw_bytes.chunks_exact(BYTE_SIZE).map(|c| GID(u32::from_le_bytes(c.try_into().unwrap()))).collect())
+                Ok(
+                    raw_bytes.chunks_exact(BYTE_SIZE)
+                    .map(|c| Some(GID(NonZeroU32::new(u32::from_le_bytes(c.try_into().unwrap()))?)))
+                    .collect()
+                )
             }
         }
     }
@@ -452,5 +452,11 @@ mod test {
         let map = Map::from_xml_str(&map_xml)?;
         assert_eq!(map.renderorder, Renderorder::RightDown);
         Ok(())
+    }
+
+    #[test]
+    fn test_gid_size_optimization() {
+        use std::mem::size_of;
+        assert_eq!(size_of::<Option<GID>>(), size_of::<u32>());
     }
 }

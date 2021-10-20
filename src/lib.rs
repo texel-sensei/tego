@@ -1,5 +1,6 @@
 //! Test
 
+use std::any::Any;
 use std::{fs::File, io::Read};
 use core::num::NonZeroU32;
 
@@ -8,6 +9,7 @@ use roxmltree::Document;
 
 mod errors;
 mod resource_manager;
+pub use resource_manager::ImageLoader;
 pub use errors::Error;
 pub use errors::Result;
 
@@ -124,6 +126,11 @@ fn attribute_or_default<T>(node: &roxmltree::Node, name: &str) -> Result<T>
     }
 }
 
+#[derive(Debug)]
+pub enum ImageStorage {
+    SpriteSheet(Box<dyn Any>),
+}
+
 pub struct TileSet {
     pub firstgid: GID,
     pub name: String,
@@ -133,11 +140,11 @@ pub struct TileSet {
     pub margin: usize,
     pub tilecount: usize,
     pub columns: usize,
-    // TODO(texel, 2021-10-15): somehow handle the image data
+    pub image: ImageStorage,
 }
 
 impl TileSet {
-    pub fn from_xml(node: &roxmltree::Node) -> Result<Self> {
+    pub fn from_xml(node: &roxmltree::Node, loader: &mut dyn ImageLoader) -> Result<Self> {
         let map_attr = |name: &str| {
             node.attribute(name).ok_or_else(||{Error::StructureError{
                 tag: node.tag_name().name().to_string(),
@@ -149,6 +156,19 @@ impl TileSet {
             return Err(Error::UnsupportedFeature(format!("Extern tileset at: {}", source)));
         }
 
+        let image_storage;
+        use ImageStorage::*;
+        if let Some(image) = node.children().filter(|n| n.tag_name().name() == "image").next() {
+            image_storage = SpriteSheet(
+                loader.load(image.attribute("source").ok_or_else(|| Error::StructureError{
+                    tag: image.tag_name().name().into(),
+                    msg: "Missing 'source' tag on image".into(),
+                })?)?
+            );
+        } else {
+            return Err(Error::UnsupportedFeature("Image collection tilesets are not implemented yet".into()))
+        }
+
         Ok(Self{
             firstgid: map_attr("firstgid")?.parse()?,
             name: map_attr("name")?.into(),
@@ -158,6 +178,7 @@ impl TileSet {
             margin: attribute_or_default(node, "margin")?,
             tilecount: map_attr("tilecount")?.parse()?,
             columns: map_attr("columns")?.parse()?,
+            image: image_storage,
         })
     }
 }
@@ -401,8 +422,13 @@ impl Map {
             }})
         };
 
-        let tilesets = map_node.children().filter(|n| n.tag_name().name() == "tileset")
-            .map(|n| TileSet::from_xml(&n)).collect::<Result<Vec<_>>>()?;
+        let mut loader = resource_manager::LazyLoader{};
+
+        let tilesets = map_node.children()
+            .filter(|n| n.tag_name().name() == "tileset")
+            .map(|n| TileSet::from_xml(&n, &mut loader))
+            .collect::<Result<Vec<_>>>()?
+        ;
 
         let mut map = Map {
             version: map_attr("version")?.parse()?,

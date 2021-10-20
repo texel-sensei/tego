@@ -9,6 +9,12 @@ fn load_default_example_map() {
     assert_eq!(map.version, Version(1,5,None));
     assert_eq!(map.editor_version, Some(Version(1, 7, Some(2))));
     assert_eq!(map.layers.len(), 1);
+
+    assert_eq!(map.tilesets.len(), 1);
+    assert!(matches!(
+        &map.tilesets[0].image,
+        ImageStorage::SpriteSheet(path) if path.downcast_ref::<String>().unwrap() == "tiles.png"
+    ));
 }
 
 #[test]

@@ -7,8 +7,11 @@ use core::num::NonZeroU32;
 use base64;
 use roxmltree::Document;
 
+#[macro_use] extern crate impl_ops;
+
 mod errors;
 mod resource_manager;
+pub mod math;
 pub use resource_manager::ImageLoader;
 pub use errors::Error;
 pub use errors::Result;

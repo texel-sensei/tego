@@ -258,7 +258,7 @@ impl<'map, 'layer> TileIterator<'map, 'layer> {
 }
 
 impl<'a,'b> Iterator for TileIterator<'a,'b> {
-    type Item = (usize, usize, Option<GID>);
+    type Item = (math::ivec2, Option<GID>);
 
     fn next(&mut self) -> Option<Self::Item> {
         assert_eq!(
@@ -275,7 +275,7 @@ impl<'a,'b> Iterator for TileIterator<'a,'b> {
         }
 
         let idx = self.x + self.layer.width * self.y;
-        let element = Some((self.x, self.y, self.layer.tiles[idx]));
+        let element = Some((math::ivec2::new(self.x as i32, self.y as i32), self.layer.tiles[idx]));
         self.x += 1;
         element
     }

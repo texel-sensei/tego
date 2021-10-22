@@ -451,6 +451,24 @@ impl Map {
         }
         Ok(map)
     }
+
+    /// Fetch the image that belongs to a given GID. Returns the image and the pixel coordinates
+    /// where the tile image is inside of that image.
+    pub fn tile_image(&self, id: GID) -> Option<(&dyn std::any::Any, math::Rect)> {
+        use math::ivec2;
+        let tileset = self.tilesets.iter().rfind(|t| t.firstgid <= id)?;
+
+
+        let size = ivec2::new(tileset.tilewidth as i32, tileset.tileheight as i32);
+        let stride = tileset.spacing  as i32;
+        let stride = size + ivec2::new(stride, stride);
+
+        let lid = (id.0.get() - tileset.firstgid.0.get()) as i32;
+        let tile_id = ivec2::new(lid % tileset.columns as i32, lid / tileset.columns as i32);
+        let upper_left = ivec2::new(tileset.margin as i32, tileset.margin as i32) + tile_id * stride;
+
+        Some((&tileset.image, math::Rect::new(upper_left, size)))
+    }
 }
 
 #[cfg(test)]

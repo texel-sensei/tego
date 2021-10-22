@@ -15,6 +15,22 @@ fn load_default_example_map() {
         &map.tilesets[0].image,
         ImageStorage::SpriteSheet(path) if path.downcast_ref::<String>().unwrap() == "tiles.png"
     ));
+
+    if let Layer::Tile(layer) = &map.layers[0] {
+        assert_eq!(layer.width, 16);
+        assert_eq!(layer.height, 16);
+        for (pos, gid) in layer.tiles_in_renderorder(&map) {
+            if gid.is_none() {
+                continue;
+            }
+            let item = map.tile_image(gid.unwrap());
+            // We must be able to resolve all GIDs that we find in a valid map
+            assert!(item.is_some());
+
+            let (img, src) = item.unwrap();
+            println!("Tile {:?} uses pixels {:?} in {:?}", pos, src, img);
+        }
+    }
 }
 
 #[test]

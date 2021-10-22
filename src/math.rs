@@ -15,6 +15,8 @@ impl ivec2 {
 
 impl_op_ex!{+ |a: &ivec2, b: &ivec2| -> ivec2 { ivec2::new(a.x + b.x, a.y + b.y )}}
 impl_op_ex!{- |a: &ivec2, b: &ivec2| -> ivec2 { ivec2::new(a.x - b.x, a.y - b.y )}}
+impl_op_ex!{* |a: &ivec2, b: &ivec2| -> ivec2 { ivec2::new(a.x * b.x, a.y * b.y )}}
+impl_op_ex!{/ |a: &ivec2, b: &ivec2| -> ivec2 { ivec2::new(a.x / b.x, a.y / b.y )}}
 impl_op_ex_commutative!{* |a: &ivec2, f: &i32| -> ivec2 { ivec2::new(a.x * f, a.y * f )}}
 
 /// Struct that defines a rectangle given by its upper left corner and extends.

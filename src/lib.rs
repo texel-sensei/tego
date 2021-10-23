@@ -467,7 +467,11 @@ impl Map {
         let tile_id = ivec2::new(lid % tileset.columns as i32, lid / tileset.columns as i32);
         let upper_left = ivec2::new(tileset.margin as i32, tileset.margin as i32) + tile_id * stride;
 
-        Some((&tileset.image, math::Rect::new(upper_left, size)))
+        match &tileset.image {
+            ImageStorage::SpriteSheet(spritesheet) => {
+                Some((&**spritesheet, math::Rect::new(upper_left, size)))
+            },
+        }
     }
 }
 

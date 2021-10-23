@@ -22,3 +22,6 @@ libflate = "1.1.1"
 thiserror = "1.0"
 base64 = "0.13"
 impl_ops = "0.1"
+
+[dev-dependencies]
+image = "0.*"

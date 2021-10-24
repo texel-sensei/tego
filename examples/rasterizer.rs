@@ -1,6 +1,22 @@
 use std::{error::Error, path::Path};
 use image::{RgbaImage, GenericImageView, GenericImage};
 
+struct ImageLoader {}
+
+impl ImageLoader {
+    fn new() -> Self { Self {  } }
+}
+
+impl tego::ImageLoader for ImageLoader {
+    fn load(&mut self, path: &str) -> tego::Result<Box<dyn std::any::Any>> {
+        let image =
+            image::open(Path::new(path))
+            .map_err(|e| tego::Error::ParseError(Box::new(e)))?
+            .to_rgba8()
+        ;
+        Ok(Box::new(image))
+    }
+}
 
 fn render_layer(
     map: &tego::Map, layer: &tego::Layer, buffer: &mut RgbaImage
@@ -11,13 +27,11 @@ fn render_layer(
         Tile(tiles) => {
             for (pos, gid) in tiles.tiles_in_renderorder(map) {
                 if gid.is_none() { continue; }
-                // TODO(texel, 2021-10-23): Make it possible to insert own loader
                 let (img_path, src_rect) = map.tile_image(gid.unwrap()).unwrap();
-                let img_path = img_path.downcast_ref::<String>().unwrap();
 
                 // TODO(texel, 2021-10-23): this opens the spritesheet for every single tile,
                 // implement some caching (ideally inside of the map loader)
-                let tile_image = image::open(Path::new(img_path))?.to_rgba8();
+                let tile_image = img_path.downcast_ref::<RgbaImage>().unwrap();
 
                 let tile_sprite = tile_image.view(
                     src_rect.upper_left.x as u32, src_rect.upper_left.y as u32,
@@ -44,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = &args[1];
     let output = &args[2];
 
-    let map = tego::Map::from_file(Path::new(input))?;
+    let map = tego::Map::from_file_with_loader(Path::new(input), &mut ImageLoader::new())?;
 
     let mut buffer = RgbaImage::new((map.width * map.tilewidth) as u32, (map.height * map.tileheight) as u32);
 

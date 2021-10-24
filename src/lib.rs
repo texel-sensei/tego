@@ -380,7 +380,6 @@ impl TileLayer {
     }
 }
 
-
 pub struct Map {
     pub version: Version,
     pub editor_version: Option<Version>,
@@ -396,17 +395,21 @@ pub struct Map {
 
 impl Map {
     pub fn from_file(path: &std::path::Path) -> Result<Self> {
+        let mut loader = resource_manager::LazyLoader {};
+        Self::from_file_with_loader(path, &mut loader)
+    }
+
+    pub fn from_file_with_loader(path: &std::path::Path, image_loader: &mut dyn resource_manager::ImageLoader) -> Result<Self> {
         let mut file = File::open(path)?;
 
         let mut file_xml = String::new();
         file.read_to_string(&mut file_xml)?;
 
-
-        Map::from_xml_str(&file_xml)
+        Self::from_xml_str(&file_xml, image_loader)
     }
 
     /// Parse a map from xml data
-    pub fn from_xml_str(tmx: &str) -> Result<Self> {
+    pub fn from_xml_str(tmx: &str, image_loader: &mut dyn resource_manager::ImageLoader) -> Result<Self> {
         let document = Document::parse(&tmx)?;
 
         let map_node = document.root_element();
@@ -425,11 +428,9 @@ impl Map {
             }})
         };
 
-        let mut loader = resource_manager::LazyLoader{};
-
         let tilesets = map_node.children()
             .filter(|n| n.tag_name().name() == "tileset")
-            .map(|n| TileSet::from_xml(&n, &mut loader))
+            .map(|n| TileSet::from_xml(&n, image_loader))
             .collect::<Result<Vec<_>>>()?
         ;
 
@@ -500,7 +501,7 @@ mod test {
             />
         "#;
 
-        let map = Map::from_xml_str(&map_xml)?;
+        let map = Map::from_xml_str(&map_xml, &mut resource_manager::LazyLoader{})?;
         assert_eq!(map.renderorder, Renderorder::RightDown);
         Ok(())
     }

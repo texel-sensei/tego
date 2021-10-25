@@ -7,6 +7,8 @@ description = "Crate for loading Tiled maps"
 readme = "README.md"
 license = "Unlicense"
 repository = "https://github.com/texel-sensei/tego"
+keywords = ["gamedev", "tmx", "tiled", "mapeditor"]
+categories = ["game-development"]
 
 # Exclude example data and tests
 exclude = [

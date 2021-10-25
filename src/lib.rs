@@ -1,4 +1,25 @@
-//! Test
+//! [tego](https://github.com/texel-sensei/tego) is a simple library for loading
+//! [Tiled](https://mapeditor.org) maps.
+//!
+//! It aims to provide a simple, yet flexible API,
+//! without forcing any special image format to the user
+//! or assuming that data is provided as a file.
+//!
+//! As a starting point,
+//! load a map using any of the *from_\** functions provided in the [Map] type.
+//! And inspect the [Layers](Map::layers) inside of it.
+//!
+//! ```no_run
+//! let path = std::path::Path::new("example-maps/default/default_map.tmx");
+//! let mymap = tego::Map::from_file(&path)?;
+//!
+//! println!(
+//!     "Map {} is {} by {} pixels.", path.display(),
+//!     mymap.width * mymap.tilewidth, mymap.height * mymap.tileheight
+//! );
+//!
+//! # Ok::<(),tego::Error>(())
+//! ```
 
 use std::any::Any;
 use std::{fs::File, io::Read};
@@ -232,6 +253,9 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
 pub enum Layer{
     /// A layer containing a grid of tiles
     Tile(TileLayer),
+    /// A layer grouping mutiple other layer together.
+    /// Group Layers may be nested,
+    /// forming a tree of layers.
     Group(GroupLayer),
 }
 
@@ -380,6 +404,10 @@ impl TileLayer {
     }
 }
 
+/// The Map struct is the top level container for all relevant data inside of a Tiled map.
+/// A Map consists of [TileSets](TileSet) and [Layers](Layer).
+/// Stacking the layers in iteration order creates the final map image.
+/// Each layer contains indices ([GIDs](GID)) referencing a specific tile in a tile sets.
 pub struct Map {
     pub version: Version,
     pub editor_version: Option<Version>,
@@ -390,6 +418,8 @@ pub struct Map {
     pub tilewidth: usize,
     pub tileheight: usize,
     pub tilesets: Vec<TileSet>,
+    /// The Layers that make up this map.
+    /// The final map image is rendered by stacking the layers in iteration order.
     pub layers: Vec<Layer>,
 }
 

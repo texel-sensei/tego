@@ -17,8 +17,7 @@ fn load_default_example_map() {
     ));
 
     if let Layer::Tile(layer) = &map.layers[0] {
-        assert_eq!(layer.width, 16);
-        assert_eq!(layer.height, 16);
+        assert_eq!(layer.size, math::ivec2::new(16, 16));
         for (pos, gid) in layer.tiles_in_renderorder(&map) {
             if gid.is_none() {
                 continue;

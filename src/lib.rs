@@ -15,7 +15,7 @@
 //!
 //! println!(
 //!     "Map {} is {} by {} pixels.", path.display(),
-//!     mymap.width * mymap.tilewidth, mymap.height * mymap.tileheight
+//!     mymap.size.x * mymap.tile_size.x, mymap.size.y * mymap.tile_size.y
 //! );
 //!
 //! # Ok::<(),tego::Error>(())
@@ -158,8 +158,7 @@ pub enum ImageStorage {
 pub struct TileSet {
     pub firstgid: GID,
     pub name: String,
-    pub tilewidth: usize,
-    pub tileheight: usize,
+    pub tile_size: math::ivec2,
     pub spacing: usize,
     pub margin: usize,
     pub tilecount: usize,
@@ -196,8 +195,10 @@ impl TileSet {
         Ok(Self{
             firstgid: map_attr("firstgid")?.parse()?,
             name: map_attr("name")?.into(),
-            tilewidth: map_attr("tilewidth")?.parse()?,
-            tileheight: map_attr("tileheight")?.parse()?,
+            tile_size: math::ivec2::new(
+                map_attr("tilewidth")?.parse()?,
+                map_attr("tileheight")?.parse()?
+            ),
             spacing: attribute_or_default(node, "spacing")?,
             margin: attribute_or_default(node, "margin")?,
             tilecount: map_attr("tilecount")?.parse()?,
@@ -273,12 +274,11 @@ impl Layer {
 pub struct TileIterator<'map, 'layer> {
     map: &'map Map,
     layer: &'layer TileLayer,
-    x: usize,
-    y: usize,
+    pos: math::ivec2,
 }
 
 impl<'map, 'layer> TileIterator<'map, 'layer> {
-    pub(crate) fn new(map: &'map Map, layer: &'layer TileLayer) -> Self { Self { map, layer, x: 0, y: 0 } }
+    pub(crate) fn new(map: &'map Map, layer: &'layer TileLayer) -> Self { Self { map, layer, pos: math::ivec2::new(0, 0) } }
 }
 
 impl<'a,'b> Iterator for TileIterator<'a,'b> {
@@ -290,17 +290,17 @@ impl<'a,'b> Iterator for TileIterator<'a,'b> {
             Renderorder::RightDown,
             "Only right-down renderorder is implemented right now"
         );
-        if self.x >= self.layer.width {
-            self.x = 0;
-            self.y += 1;
+        if self.pos.x >= self.layer.size.x {
+            self.pos.x = 0;
+            self.pos.y += 1;
         }
-        if self.y >= self.layer.height {
+        if self.pos.y >= self.layer.size.y {
             return None;
         }
 
-        let idx = self.x + self.layer.width * self.y;
-        let element = Some((math::ivec2::new(self.x as i32, self.y as i32), self.layer.tiles[idx]));
-        self.x += 1;
+        let idx = self.pos.x + self.layer.size.x * self.pos.y;
+        let element = Some((self.pos, self.layer.tiles[idx as usize]));
+        self.pos.x += 1;
         element
     }
 }
@@ -309,8 +309,7 @@ impl<'a,'b> Iterator for TileIterator<'a,'b> {
 pub struct GroupLayer {
     pub id: usize,
     pub name: String,
-    pub offsetx: usize,
-    pub offsety: usize,
+    pub offset: math::ivec2,
     pub opacity: f32,
     pub visible: bool,
     // pub tintcolor: TODO
@@ -333,8 +332,10 @@ impl GroupLayer {
         Ok(Self{
             id: map_attr("id")?.parse()?,
             name: node.attribute("name").unwrap_or_default().to_string(),
-            offsetx: attribute_or_default(node, "offsetx")?,
-            offsety: attribute_or_default(node, "offsety")?,
+            offset: math::ivec2::new(
+                attribute_or_default(node, "offsetx")?,
+                attribute_or_default(node, "offsety")?
+            ),
             opacity: attribute_or(node, "opacity", 1.)?,
             visible: attribute_or(node, "opacity", true)?,
             content: content?,
@@ -345,8 +346,7 @@ impl GroupLayer {
 pub struct TileLayer {
     pub id: usize,
     pub name: String,
-    pub width: usize,
-    pub height: usize,
+    pub size: math::ivec2,
     pub tiles: Vec<Option<GID>>
 }
 
@@ -384,8 +384,10 @@ impl TileLayer {
         Ok(Self{
             id: map_attr("id")?.parse()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
-            width: map_attr("width")?.parse()?,
-            height: map_attr("height")?.parse()?,
+            size: math::ivec2::new(
+                map_attr("width")?.parse()?,
+                map_attr("height")?.parse()?
+            ),
             tiles: Self::parse_data(&tmx.children().find(|n| n.tag_name().name() == "data").unwrap())?,
         })
     }
@@ -413,10 +415,8 @@ pub struct Map {
     pub editor_version: Option<Version>,
     pub orientation: Orientation,
     pub renderorder: Renderorder,
-    pub width: usize,
-    pub height: usize,
-    pub tilewidth: usize,
-    pub tileheight: usize,
+    pub size: math::ivec2,
+    pub tile_size: math::ivec2,
     pub tilesets: Vec<TileSet>,
     /// The Layers that make up this map.
     /// The final map image is rendered by stacking the layers in iteration order.
@@ -469,10 +469,14 @@ impl Map {
             editor_version: None,
             orientation: map_attr("orientation")?.parse()?,
             renderorder: attribute_or_default(&map_node, "renderorder")?,
-            width: map_attr("width")?.parse()?,
-            height: map_attr("height")?.parse()?,
-            tilewidth: map_attr("tilewidth")?.parse()?,
-            tileheight: map_attr("tileheight")?.parse()?,
+            size: math::ivec2::new(
+                map_attr("width")?.parse()?,
+                map_attr("height")?.parse()?
+            ),
+            tile_size: math::ivec2::new(
+                map_attr("tilewidth")?.parse()?,
+                map_attr("tileheight")?.parse()?
+            ),
             tilesets,
             layers:
                 map_node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>()?
@@ -490,8 +494,8 @@ impl Map {
         let tileset = self.tilesets.iter().rfind(|t| t.firstgid <= id)?;
 
 
-        let size = ivec2::new(tileset.tilewidth as i32, tileset.tileheight as i32);
-        let stride = tileset.spacing  as i32;
+        let size = ivec2::new(tileset.tile_size.x, tileset.tile_size.y);
+        let stride = tileset.spacing as i32;
         let stride = size + ivec2::new(stride, stride);
 
         let lid = (id.0.get() - tileset.firstgid.0.get()) as i32;

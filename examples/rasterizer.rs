@@ -38,9 +38,11 @@ fn render_layer(
                     src_rect.size.x as u32, src_rect.size.y as u32
                 );
 
+                let origin = pos *  map.tile_size;
+
                 buffer.copy_from(
                     &tile_sprite,
-                    pos.x as u32 * map.tilewidth as u32, pos.y as u32 * map.tileheight as u32
+                    origin.x as u32, origin.y as u32
                 )?;
             }
         }
@@ -60,7 +62,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let map = tego::Map::from_file_with_loader(Path::new(input), &mut ImageLoader::new())?;
 
-    let mut buffer = RgbaImage::new((map.width * map.tilewidth) as u32, (map.height * map.tileheight) as u32);
+    let resolution = map.size * map.tile_size;
+    let mut buffer = RgbaImage::new(resolution.x as u32, resolution.y as u32);
 
     for layer in &map.layers {
         render_layer(&map, &layer, &mut buffer)?;

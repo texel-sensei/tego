@@ -508,7 +508,42 @@ impl Map {
             },
         }
     }
+
+    /// Iterate over all the layers in this map recursively.
+    /// All layers are visited in depth-first pre-order manner.
+    /// The iterator yields the group layers, as well as all of their sub-layers.
+    pub fn iter_layers(&self) -> impl Iterator<Item=&Layer> {
+        LayerIterator::new(&self.layers)
+    }
 }
+
+struct LayerIterator<'a> {
+    iter_stack: Vec<std::slice::Iter<'a, Layer>>
+}
+
+impl<'a> LayerIterator<'a> {
+    fn new(layers: &'a [Layer]) -> Self { Self { iter_stack: vec![layers.iter()] } }
+}
+
+impl<'a> Iterator for LayerIterator<'a> {
+    type Item = &'a Layer;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(iter) = self.iter_stack.last_mut() {
+            if let Some(layer) = iter.next() {
+                if let Layer::Group(group) = layer {
+                    self.iter_stack.push(group.content.iter());
+                }
+                return Some(layer);
+            } else {
+                self.iter_stack.pop();
+            }
+        }
+        None
+    }
+}
+
+
 
 #[cfg(test)]
 mod test {
@@ -544,5 +579,31 @@ mod test {
     fn test_gid_size_optimization() {
         use std::mem::size_of;
         assert_eq!(size_of::<Option<GID>>(), size_of::<u32>());
+    }
+
+    #[test]
+    fn test_layer_iterator() {
+        use Layer::*;
+        macro_rules! layer {
+            (tile) => {Tile(TileLayer{id: 0, name: "".into(), size: math::ivec2::new(0,0), tiles: vec![]})};
+            (group $layers:expr) => {Group(GroupLayer{id:0, name: "".into(), offset: math::ivec2::new(0,0), opacity: 0., visible:false, content: $layers})};
+        }
+
+        let layers = vec![
+            layer!(tile),
+            layer!(group vec![]),
+            layer!(tile),
+            layer!(group vec![
+                layer!(group vec![
+                    layer!(tile),
+                    layer!(tile),
+                ])
+            ]),
+        ];
+
+        let result: Vec<_> = LayerIterator::new(&layers).collect();
+        assert_eq!(result.len(), 7);
+
+        assert!(std::ptr::eq(result[2], &layers[2]));
     }
 }

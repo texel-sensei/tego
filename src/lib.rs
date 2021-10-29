@@ -512,7 +512,28 @@ impl Map {
     /// Iterate over all the layers in this map recursively.
     /// All layers are visited in depth-first pre-order manner.
     /// The iterator yields the group layers, as well as all of their sub-layers.
-    pub fn iter_layers(&self) -> impl Iterator<Item=&Layer> {
+    ///
+    /// In addition to the layer, a number of "pops" is also returned with each item.
+    /// This is the number of group layers that was left with this iteration step.
+    /// Some attributes of group layers affect all containing layers.
+    /// If those attributes are accumulated in a stack,
+    /// then the number of pops is the number of elemets to remove from the top of the stack.
+    ///
+    /// # Example
+    ///
+    /// Rendering layers under consideration of the group opacity:
+    ///
+    /// ```ignore
+    /// let opacities = vec![1.];
+    /// for (layer, pops) in map.iter_layers() {
+    ///     opacities.truncate(opacities.len() - pops);
+    ///     match layer {
+    ///         Layer::Group(group) => { opacities.push(opacities.last().unwrap() * group.opacity) },
+    ///         Layer::Tile(tile) => { render_layer(tile, opacities.last()) }
+    ///     }
+    /// }
+    /// ```
+    pub fn iter_layers(&self) -> impl Iterator<Item=(&Layer, usize)> {
         LayerIterator::new(&self.layers)
     }
 }
@@ -526,16 +547,18 @@ impl<'a> LayerIterator<'a> {
 }
 
 impl<'a> Iterator for LayerIterator<'a> {
-    type Item = &'a Layer;
+    type Item = (&'a Layer, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
+        let mut pops = 0;
         while let Some(iter) = self.iter_stack.last_mut() {
             if let Some(layer) = iter.next() {
                 if let Layer::Group(group) = layer {
                     self.iter_stack.push(group.content.iter());
                 }
-                return Some(layer);
+                return Some((layer, pops));
             } else {
+                pops += 1;
                 self.iter_stack.pop();
             }
         }
@@ -604,6 +627,13 @@ mod test {
         let result: Vec<_> = LayerIterator::new(&layers).collect();
         assert_eq!(result.len(), 7);
 
-        assert!(std::ptr::eq(result[2], &layers[2]));
+        // check that we get the group
+        assert!(std::ptr::eq(result[2].0, &layers[2]));
+
+        // no pops on a top level tile layer
+        assert_eq!(result[0].1, 0);
+
+        // one pop after the empty group
+        assert_eq!(result[2].1, 1);
     }
 }

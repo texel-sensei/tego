@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     for layer in map.iter_layers() {
         use tego::Layer::*;
-        if let Tile(tile_layer) = layer {
+        if let (Tile(tile_layer), _) = layer {
             render_layer(&map, &tile_layer, &mut buffer)?;
         }
     }

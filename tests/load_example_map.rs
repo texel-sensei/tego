@@ -45,3 +45,10 @@ fn load_group_example_map() {
         assert_eq!(g.content.len(), 3);
     }
 }
+
+#[test]
+fn load_object_example_map() {
+    let map = Map::from_file(Path::new("example-maps/default/objects.tmx")).unwrap();
+
+    assert_eq!(map.layers.len(), 2);
+}

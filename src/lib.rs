@@ -254,10 +254,18 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
 pub enum Layer{
     /// A layer containing a grid of tiles
     Tile(TileLayer),
+
     /// A layer grouping mutiple other layer together.
     /// Group Layers may be nested,
     /// forming a tree of layers.
     Group(GroupLayer),
+
+    /// A layer containing objects.
+    /// Objects are not aligned to the tile grid.
+    /// They can be used for example to mark regions of interest.
+    ///
+    /// Object layers are also called object  groups.
+    Object(ObjectLayer),
 }
 
 impl Layer {
@@ -266,6 +274,7 @@ impl Layer {
         match node.tag_name().name() {
             "layer" => Some(TileLayer::from_xml(node).map(|l| Tile(l))),
             "group" => Some(GroupLayer::from_xml(node).map(|l| Group(l))),
+            "objectgroup" => Some(ObjectLayer::from_xml(node).map(|l| Object(l))),
             _ => None,
         }
     }
@@ -405,6 +414,45 @@ impl TileLayer {
         TileIterator::new(map, &self)
     }
 }
+
+/// An ObjectLayer is a container of Objects.
+/// Objects are not aligned to the tile grid,
+/// and can be used to include extra information in a map.
+///
+/// Check the [Tiled Documentation](https://doc.mapeditor.org/en/stable/manual/objects/)
+/// for more information on objects.
+pub struct ObjectLayer {
+    pub id: usize,
+    pub name: String,
+    pub opacity: f32,
+    pub visible: bool,
+    pub offset: math::ivec2,
+}
+
+impl ObjectLayer {
+    pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
+        assert_eq!(tmx.tag_name().name(), "objectgroup");
+
+        let map_attr = |name: &str| {
+            tmx.attribute(name).ok_or_else(||{Error::StructureError{
+                tag: tmx.tag_name().name().to_string(),
+                msg: format!("Required attribute '{}' missing", name)
+            }})
+        };
+        Ok(Self{
+            id: map_attr("id")?.parse()?,
+            name: tmx.attribute("name").unwrap_or_default().to_string(),
+            opacity: attribute_or(tmx, "opacity", 1.)?,
+            visible: attribute_or(tmx, "opacity", true)?,
+            offset: math::ivec2::new(
+                attribute_or_default(tmx, "offsetx")?,
+                attribute_or_default(tmx, "offsety")?
+            ),
+        })
+    }
+
+}
+
 
 /// The Map struct is the top level container for all relevant data inside of a Tiled map.
 /// A Map consists of [TileSets](TileSet) and [Layers](Layer).

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="8">
+ <group id="3" name="Group">
+  <objectgroup id="4" name="Child Object Layer">
+   <object id="5" name="Ellipse" x="45.2087" y="57.8079">
+    <ellipse/>
+   </object>
+   <object id="6" name="Polygon" x="88.3794" y="90.6027">
+    <polygon points="0,0 -3.89092,-34.2771 57.0668,-34.4624 50.3966,22.9749 42.9854,-21.3074"/>
+   </object>
+   <object id="7" name="Text" x="11.7186" y="119.641" width="91.4375" height="19">
+    <text wrap="1">Hello World</text>
+   </object>
+  </objectgroup>
+ </group>
+ <objectgroup id="2" name="Top Object Layer">
+  <object id="1" name="Rectangle" x="16.3048" y="32.239" width="10" height="20"/>
+  <object id="2" name="Point" x="120.248" y="25.013">
+   <point/>
+  </object>
+ </objectgroup>
+</map>

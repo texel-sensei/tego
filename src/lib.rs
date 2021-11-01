@@ -150,6 +150,15 @@ fn attribute_or_default<T>(node: &roxmltree::Node, name: &str) -> Result<T>
     }
 }
 
+impl math::ivec2 {
+    pub(crate) fn from_tmx_or_default(tmx: &roxmltree::Node, x_attr: &str, y_attr: &str) -> Result<Self> {
+        Ok(Self::new(
+            attribute_or_default(tmx, x_attr)?,
+            attribute_or_default(tmx, y_attr)?
+        ))
+    }
+}
+
 #[derive(Debug)]
 pub enum ImageStorage {
     SpriteSheet(Box<dyn Any>),
@@ -341,10 +350,7 @@ impl GroupLayer {
         Ok(Self{
             id: map_attr("id")?.parse()?,
             name: node.attribute("name").unwrap_or_default().to_string(),
-            offset: math::ivec2::new(
-                attribute_or_default(node, "offsetx")?,
-                attribute_or_default(node, "offsety")?
-            ),
+            offset: math::ivec2::from_tmx_or_default(node, "offsetx", "offsety")?,
             opacity: attribute_or(node, "opacity", 1.)?,
             visible: attribute_or(node, "opacity", true)?,
             content: content?,
@@ -426,6 +432,9 @@ pub struct ObjectLayer {
     pub opacity: f32,
     pub visible: bool,
     pub offset: math::ivec2,
+
+    /// The [Objects](Object) contained in this layer
+    pub content: Vec<Object>,
 }
 
 impl ObjectLayer {
@@ -438,18 +447,103 @@ impl ObjectLayer {
                 msg: format!("Required attribute '{}' missing", name)
             }})
         };
+
+        let content = tmx.children()
+            .filter(|t| t.tag_name().name() == "object")
+            .map(|t| Object::from_xml(&t))
+            .collect::<Result<_>>()?
+        ;
+
         Ok(Self{
             id: map_attr("id")?.parse()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
             opacity: attribute_or(tmx, "opacity", 1.)?,
             visible: attribute_or(tmx, "opacity", true)?,
-            offset: math::ivec2::new(
-                attribute_or_default(tmx, "offsetx")?,
-                attribute_or_default(tmx, "offsety")?
-            ),
+            offset: math::ivec2::from_tmx_or_default(tmx, "offsetx", "offsety")?,
+            content
         })
     }
 
+}
+
+/// An element of an [ObjectLayer].
+/// Objects do not need to be aligned to the normal tile grid.
+/// Objects can have different kinds,
+/// (e.g. rect, ellipse, text).
+/// See [ObjectKind] for more info.
+pub struct Object {
+    pub id: usize,
+    pub name: String,
+    pub type_: String,
+    //pub pos: math::ivec2,
+    //pub size: math::ivec2,
+    pub rotation: f32,
+    pub tile_id: Option<GID>,
+    pub visible: bool,
+    pub kind: ObjectKind,
+}
+
+impl Object {
+    fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
+        let map_attr = |name: &str| {
+            tmx.attribute(name).ok_or_else(||{Error::StructureError{
+                tag: tmx.tag_name().name().to_string(),
+                msg: format!("Required attribute '{}' missing", name)
+            }})
+        };
+
+        let tile_id = if let Some(txt) = tmx.attribute("gid") {
+            Some(txt.parse()?)
+        } else {
+            None
+        };
+
+        Ok(Object{
+            id: map_attr("id")?.parse()?,
+            name: attribute_or_default(tmx, "name")?,
+            type_: attribute_or_default(tmx, "type")?,
+            //pos: math::ivec2::from_tmx_or_default(tmx, "x", "y")?,
+            //size: math::ivec2::from_tmx_or_default(tmx, "width", "height")?,
+            rotation: attribute_or_default(tmx, "rotation")?,
+            tile_id,
+            visible: attribute_or(tmx, "visible", true)?,
+            kind: ObjectKind::from_xml(tmx)?,
+        })
+    }
+}
+
+pub enum ObjectKind {
+    Rect,
+    Ellipse,
+    Point,
+    Polygon {
+        points: Vec<(f32, f32)>
+    },
+    Polyline {
+        points: Vec<(f32, f32)>
+    },
+    Text {
+        content: String
+        // todo
+    },
+}
+
+impl ObjectKind {
+    fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
+        use ObjectKind::*;
+        use Error::UnsupportedFeature;
+        for child in tmx.children() {
+            match child.tag_name().name() {
+                "ellipse" => return Ok(Ellipse),
+                "point" => return Ok(Point),
+                "polygon" => return Err(UnsupportedFeature("Polygon objects not yet supported".into())),
+                "polyline" => return Err(UnsupportedFeature("Polyline objects not yet supported".into())),
+                "text" => return Err(UnsupportedFeature("Text objects not yet supported".into())),
+                _ => continue,
+            }
+        }
+        Ok(Rect)
+    }
 }
 
 

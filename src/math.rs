@@ -2,7 +2,7 @@
 
 use std::ops;
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
 #[allow(non_camel_case_types)]
 pub struct ivec2 {
     pub x: i32,

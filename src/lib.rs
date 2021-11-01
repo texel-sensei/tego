@@ -373,7 +373,6 @@ impl TileLayer {
                 assert!(raw_bytes.len() % BYTE_SIZE == 0);
 
                 // convert chunk of bytes into GIDS (via u32)
-                use std::convert::TryInto;
                 Ok(
                     raw_bytes.chunks_exact(BYTE_SIZE)
                     .map(|c| Some(GID(NonZeroU32::new(u32::from_le_bytes(c.try_into().unwrap()))?)))

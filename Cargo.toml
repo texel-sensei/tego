@@ -2,7 +2,7 @@
 name = "tego"
 version = "0.2.0"
 authors = ["texel <texelsensei@posteo.net>"]
-edition = "2018"
+edition = "2021"
 description = "Crate for loading Tiled maps"
 readme = "README.md"
 license = "Unlicense"

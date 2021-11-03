@@ -557,7 +557,7 @@ impl AsPointListExt for &str {
 impl ObjectKind {
     fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         use ObjectKind::*;
-        use Error::{UnsupportedFeature, StructureError};
+        use Error::StructureError;
         for child in tmx.children() {
             match child.tag_name().name() {
                 "ellipse" => return Ok(Ellipse),
@@ -577,7 +577,11 @@ impl ObjectKind {
                         _ => unreachable!(),
                     });
                 }
-                "text" => return Err(UnsupportedFeature("Text objects not yet supported".into())),
+                "text" => {
+                    return Ok(Text {
+                        content: child.text().unwrap_or_default().into()
+                    });
+                },
                 _ => continue,
             }
         }

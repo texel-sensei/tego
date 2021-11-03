@@ -48,9 +48,31 @@ fn load_group_example_map() {
 
 #[test]
 fn load_object_example_map() {
-    let map = Map::from_file(Path::new("example-maps/default/objects.tmx"));
+    let map = Map::from_file(Path::new("example-maps/default/objects.tmx")).unwrap();
 
-    //assert_eq!(map.layers.len(), 2);
+    assert_eq!(map.layers.len(), 2);
 
-    assert!(matches!(map, Err(Error::UnsupportedFeature(_))));
+    let object_layers: Vec<_> = map
+        .iter_layers()
+        .filter_map(|(l,_)| match l { Layer::Object(x) => Some(x), _ => None})
+        .collect()
+    ;
+
+    assert_eq!(object_layers.len(), 2);
+
+    let objects = &object_layers[0].content;
+    assert_eq!(objects.len(), 3);
+    assert!(matches!(&objects[0].kind, ObjectKind::Ellipse));
+    assert!(matches!(&objects[1].kind, ObjectKind::Polygon{..}));
+
+    if let ObjectKind::Text{ content, .. } = &objects[2].kind {
+        assert_eq!(content, "Hello World");
+    } else {
+        panic!("Expected object to be a text object");
+    }
+
+    let objects = &object_layers[1].content;
+    assert_eq!(objects.len(), 2);
+    assert!(matches!(&objects[0].kind, ObjectKind::Rect));
+    assert!(matches!(&objects[1].kind, ObjectKind::Point));
 }

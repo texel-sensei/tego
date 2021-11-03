@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
+- Support for loading objects stored in a map. Loading of text objects is only
+  partially supported (only text contents, no metadata)
 - Added Map::iter_layers() for a simple way to iterate the layers in a map
 - math::ivec2 now implements [Default]
 

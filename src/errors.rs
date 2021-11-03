@@ -32,3 +32,9 @@ impl From<std::num::ParseIntError> for Error {
         Error::ParseError(Box::new(e))
     }
 }
+
+impl From<std::num::ParseFloatError> for Error {
+    fn from(e: std::num::ParseFloatError) -> Self {
+        Error::ParseError(Box::new(e))
+    }
+}

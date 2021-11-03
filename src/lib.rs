@@ -159,6 +159,15 @@ impl math::ivec2 {
     }
 }
 
+impl math::fvec2 {
+    pub(crate) fn from_tmx_or_default(tmx: &roxmltree::Node, x_attr: &str, y_attr: &str) -> Result<Self> {
+        Ok(Self::new(
+            attribute_or_default(tmx, x_attr)?,
+            attribute_or_default(tmx, y_attr)?
+        ))
+    }
+}
+
 #[derive(Debug)]
 pub enum ImageStorage {
     SpriteSheet(Box<dyn Any>),
@@ -475,8 +484,8 @@ pub struct Object {
     pub id: usize,
     pub name: String,
     pub type_: String,
-    //pub pos: math::ivec2,
-    //pub size: math::ivec2,
+    pub pos: math::fvec2,
+    pub size: math::fvec2,
     pub rotation: f32,
     pub tile_id: Option<GID>,
     pub visible: bool,
@@ -502,8 +511,8 @@ impl Object {
             id: map_attr("id")?.parse()?,
             name: attribute_or_default(tmx, "name")?,
             type_: attribute_or_default(tmx, "type")?,
-            //pos: math::ivec2::from_tmx_or_default(tmx, "x", "y")?,
-            //size: math::ivec2::from_tmx_or_default(tmx, "width", "height")?,
+            pos: math::fvec2::from_tmx_or_default(tmx, "x", "y")?,
+            size: math::fvec2::from_tmx_or_default(tmx, "width", "height")?,
             rotation: attribute_or_default(tmx, "rotation")?,
             tile_id,
             visible: attribute_or(tmx, "visible", true)?,
@@ -517,10 +526,10 @@ pub enum ObjectKind {
     Ellipse,
     Point,
     Polygon {
-        points: Vec<(f32, f32)>
+        points: Vec<math::fvec2>
     },
     Polyline {
-        points: Vec<(f32, f32)>
+        points: Vec<math::fvec2>
     },
     Text {
         content: String
@@ -528,16 +537,46 @@ pub enum ObjectKind {
     },
 }
 
+trait AsPointListExt { fn as_point_list(&self) -> Result<Vec<math::fvec2>>; }
+
+impl AsPointListExt for &str {
+    fn as_point_list(&self) -> Result<Vec<math::fvec2>> {
+        let mut points = vec![];
+        for point in self.split_ascii_whitespace() {
+            let mut coords = point.split(',');
+            if let (Some(x), Some(y), None) = (coords.next(), coords.next(), coords.next()) {
+                points.push(math::fvec2::new(x.parse()?,y.parse()?));
+            } else {
+                return Err(Error::ParseError(format!("{} is not a valid point", point).into()));
+            }
+        }
+        Ok(points)
+    }
+}
+
 impl ObjectKind {
     fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         use ObjectKind::*;
-        use Error::UnsupportedFeature;
+        use Error::{UnsupportedFeature, StructureError};
         for child in tmx.children() {
             match child.tag_name().name() {
                 "ellipse" => return Ok(Ellipse),
                 "point" => return Ok(Point),
-                "polygon" => return Err(UnsupportedFeature("Polygon objects not yet supported".into())),
-                "polyline" => return Err(UnsupportedFeature("Polyline objects not yet supported".into())),
+                poly @ ("polygon" | "polyline") => {
+                    let points = child
+                        .attribute("points")
+                        .ok_or(StructureError{
+                            tag: child.tag_name().name().into(),
+                            msg: "Missing attribute points".into()
+                        })?
+                        .as_point_list()?
+                    ;
+                    return Ok(match poly {
+                        "polygon" => Polygon { points },
+                        "polyline" => Polyline { points },
+                        _ => unreachable!(),
+                    });
+                }
                 "text" => return Err(UnsupportedFeature("Text objects not yet supported".into())),
                 _ => continue,
             }

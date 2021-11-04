@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.3.1] - 2021-11-04
+### Changed
+- Fixed ugly indentation in example code
+
 ## [0.3.0] - 2021-11-04
 ### Added
 - Support for loading objects stored in a map. Loading of text objects is only

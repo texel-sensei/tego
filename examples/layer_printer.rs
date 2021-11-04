@@ -5,12 +5,12 @@ fn main() -> tego::Result<()> {
     // Load a tmx file.
     // Map::from_file() is the easiest, but least flexible method for loading a map.
     // Images referenced by the map are not loaded, instead only the path is returned as string.
-	let map = tego::Map::from_file(Path::new("example-maps/default/groups.tmx"))?;
+    let map = tego::Map::from_file(Path::new("example-maps/default/groups.tmx"))?;
 
     // Keep track how much we need to indent for some nice pretty printing
-	let mut indent = 0;
+    let mut indent = 0;
 
-	for (layer, groups_left) in map.iter_layers() {
+    for (layer, groups_left) in map.iter_layers() {
         // Reduce indentation by the amount of groups left
         indent -= groups_left;
 
@@ -32,6 +32,6 @@ fn main() -> tego::Result<()> {
                 println!("Layer '{}' containing {} objects", layer.name, layer.content.len());
             },
         }
-	}
-	Ok(())
+    }
+    Ok(())
 }

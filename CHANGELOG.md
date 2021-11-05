@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Added
+- The `backgroundcolor` property of the Map is now loaded
+- The `tintcolor` of tile layers is now loaded
+- The `color` and `tintcolor` of object layers is loaded
+- The `tintcolor` of group layers is now loaded
 
 ## [0.3.1] - 2021-11-04
 ### Changed

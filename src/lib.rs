@@ -395,7 +395,7 @@ pub struct GroupLayer {
     pub offset: math::ivec2,
     pub opacity: f32,
     pub visible: bool,
-    // pub tintcolor: TODO
+    pub tintcolor: Color,
     pub content: Vec<Layer>
 }
 
@@ -418,6 +418,7 @@ impl GroupLayer {
             offset: math::ivec2::from_tmx_or_default(node, "offsetx", "offsety")?,
             opacity: attribute_or(node, "opacity", 1.)?,
             visible: attribute_or(node, "opacity", true)?,
+            tintcolor: attribute_or(node, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
             content: content?,
         })
     }
@@ -427,6 +428,14 @@ pub struct TileLayer {
     pub id: usize,
     pub name: String,
     pub size: math::ivec2,
+
+    /// Color that is multiplied with the colors of the tiles in this layer.
+    /// Defaults to opaque white, which acts as a no-op when multiplied.
+    ///
+    /// *Note:* Multiplication with the raw values of the [Color] struct would
+    /// lead to the wrong result! The colors must first be converted to the
+    /// invervall [0-1] (division by 255).
+    pub tintcolor: Color,
     pub tiles: Vec<Option<GID>>
 }
 
@@ -467,6 +476,7 @@ impl TileLayer {
                 map_attr("width")?.parse()?,
                 map_attr("height")?.parse()?
             ),
+            tintcolor: attribute_or(tmx, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
             tiles: Self::parse_data(&tmx.children().find(|n| n.tag_name().name() == "data").unwrap())?,
         })
     }
@@ -494,8 +504,16 @@ impl TileLayer {
 pub struct ObjectLayer {
     pub id: usize,
     pub name: String,
+
+    /// Color that is used to render [Objects](Object) in this layer.
+    pub color: Color,
     pub opacity: f32,
     pub visible: bool,
+
+    /// Color that is multiplied with the color of tile-objects in this layer.
+    /// Acts the same way as [TileLayer::tintcolor].
+    pub tintcolor: Color,
+
     pub offset: math::ivec2,
 
     /// The [Objects](Object) contained in this layer
@@ -522,8 +540,10 @@ impl ObjectLayer {
         Ok(Self{
             id: map_attr("id")?.parse()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
+            color: attribute_or(tmx, "color", Color::from_argb(255, 160, 160, 164))?,
             opacity: attribute_or(tmx, "opacity", 1.)?,
             visible: attribute_or(tmx, "opacity", true)?,
+            tintcolor: attribute_or(tmx, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
             offset: math::ivec2::from_tmx_or_default(tmx, "offsetx", "offsety")?,
             content
         })
@@ -658,6 +678,11 @@ pub struct Map {
     pub size: math::ivec2,
     pub tile_size: math::ivec2,
     pub tilesets: Vec<TileSet>,
+
+    /// Background color of this map.
+    /// By default fully transparent.
+    pub backgroundcolor: Color,
+
     /// The Layers that make up this map.
     /// The final map image is rendered by stacking the layers in iteration order.
     pub layers: Vec<Layer>,
@@ -718,6 +743,7 @@ impl Map {
                 map_attr("tileheight")?.parse()?
             ),
             tilesets,
+            backgroundcolor: attribute_or_default(&map_node, "backgroundcolor")?,
             layers:
                 map_node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>()?
         };
@@ -848,8 +874,15 @@ mod test {
     fn test_layer_iterator() {
         use Layer::*;
         macro_rules! layer {
-            (tile) => {Tile(TileLayer{id: 0, name: "".into(), size: math::ivec2::new(0,0), tiles: vec![]})};
-            (group $layers:expr) => {Group(GroupLayer{id:0, name: "".into(), offset: math::ivec2::new(0,0), opacity: 0., visible:false, content: $layers})};
+            (tile) => {Tile(TileLayer{
+                id: 0, name: "".into(), size: math::ivec2::new(0,0),
+                tintcolor: Color::default(), tiles: vec![]
+            })};
+            (group $layers:expr) => {Group(GroupLayer{
+                id:0, name: "".into(), offset: math::ivec2::new(0,0),
+                opacity: 0., tintcolor: Color::default(), visible:false,
+                content: $layers
+            })};
         }
 
         let layers = vec![

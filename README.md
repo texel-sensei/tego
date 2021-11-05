@@ -74,7 +74,7 @@ This is not an exhaustive list.
     * ✅ Orthogonal & Isometric maps
     * ❌ Hexagonal & staggered maps
     * ❌ Editor related metadata
-    * ❌ Color information
+    * ✅ Color information
 
 * 🚧 Tile Sets
     * ✅ Metadata

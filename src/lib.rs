@@ -116,6 +116,62 @@ impl Default for Renderorder {
     }
 }
 
+/// An 8 bit RGB color with alpha value.
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
+pub struct Color(u32);
+
+impl Color {
+    pub fn from_argb(a: u8, r: u8, g: u8, b: u8) -> Self {
+        Color(
+              (a as u32) << 24
+            | (r as u32) << 16
+            | (g as u32) << 8
+            | (b as u32) << 0
+        )
+    }
+
+    pub fn alpha(&self) -> u8 { ((self.0 >> 24) & 0xFF) as u8 }
+    pub fn red(&self)   -> u8 { ((self.0 >> 16) & 0xFF) as u8 }
+    pub fn green(&self) -> u8 { ((self.0 >>  8) & 0xFF) as u8 }
+    pub fn blue(&self)  -> u8 { ((self.0 >>  0) & 0xFF) as u8 }
+
+    pub fn to_u32(&self) -> u32 { self.0 }
+}
+
+impl std::str::FromStr for Color {
+    type Err = Error;
+
+    /// Parse a color from a hex string.
+    ///
+    /// ```
+    /// let red: tego::Color = "#FF0000".parse()?;
+    /// assert_eq!(red.red(), 255);
+    /// assert_eq!(red.blue(), 0);
+    /// assert_eq!(red.alpha(), 255);
+    /// # Ok::<(),tego::Error>(())
+    /// ```
+    fn from_str(s: &str) -> Result<Self> {
+        use Error::*;
+        let make_error = || ParseError(format!("Invalid color string, expected #AARRGGBB, got '{}'", s).into());
+
+        let s = s
+            .strip_prefix('#')
+            .ok_or_else(make_error)?;
+
+        match s.len() {
+            8 => {
+                let [a, r, g, b] = u32::from_str_radix(s, 16)?.to_be_bytes();
+                Ok(Color::from_argb(a, r, g, b))
+            },
+            6 => {
+                let [_, r, g, b] = u32::from_str_radix(s, 16)?.to_be_bytes();
+                Ok(Color::from_argb(255, r, g, b))
+            },
+            _ => Err(make_error())
+        }
+    }
+}
+
 /// Global Tile ID
 /// A GID acts as an index into any tileset referenced in the map
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
@@ -819,5 +875,23 @@ mod test {
 
         // one pop after the empty group
         assert_eq!(result[2].1, 1);
+    }
+
+    #[test]
+    fn test_color_parsing() {
+        assert_eq!(Color::from_argb(255,255,255,255), "#FFFFFFFF".parse().unwrap());
+        assert_eq!(Color::from_argb(255,  0,255,255),   "#00FFFF".parse().unwrap());
+
+        // missing hashtag (#)
+        assert!("00FFFF".parse::<Color>().is_err());
+
+        // not enough components
+        assert!("#FFFF".parse::<Color>().is_err());
+
+        // too many enough components
+        assert!("#FF00FF00FF".parse::<Color>().is_err());
+
+        // invalid hex
+        assert!("#FQ00FF".parse::<Color>().is_err());
     }
 }

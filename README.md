@@ -87,7 +87,7 @@ This is not an exhaustive list.
     * ✅ uncompressed/zlib/gzip base64 data
     * ❌ csv loading
     * ❌ `<tile>` loading
-    * ❌ Tile flipping
+    * ✅Tile flipping
 
 * ❌ Infinite maps
 

@@ -37,6 +37,12 @@ pub use resource_manager::ImageLoader;
 pub use errors::Error;
 pub use errors::Result;
 
+const GID_HORIZONTAL_FLIP_FLAG: u32 = 0x80000000;
+const GID_VERTICAL_FLIP_FLAG: u32   = 0x40000000;
+const GID_DIAGONAL_FLIP_FLAG: u32   = 0x20000000;
+
+const GID_FLIP_MASK: u32 = GID_HORIZONTAL_FLIP_FLAG | GID_VERTICAL_FLIP_FLAG | GID_DIAGONAL_FLIP_FLAG;
+
 /// Version number consisting out of a MAJOR and MINOR version number, followed by an optional PATCH
 #[derive(Debug, PartialEq, Eq)]
 pub struct Version(
@@ -177,6 +183,38 @@ impl std::str::FromStr for Color {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 #[repr(transparent)]
 pub struct GID(NonZeroU32);
+
+impl GID {
+    const fn as_raw(&self) -> u32 {
+        self.0.get()
+    }
+
+    /// Turn this GID into an u32 for indexing.
+    /// This function masks the bits used for tile flipping,
+    /// to get the flip information use [GID::flip_horizontal], [GID::flip_vertical] and
+    /// [GID::flip_diagonal].
+    ///
+    /// This is a low level function,
+    /// for looking up the image for a tile prefer to use [Map::tile_image] instead.
+    pub const fn to_id(&self) -> u32 {
+        self.as_raw() & !GID_FLIP_MASK
+    }
+
+    /// Return whether this tile is flipped horizontally or not
+    pub fn flip_horizontal(&self) -> bool {
+        (self.as_raw() & GID_HORIZONTAL_FLIP_FLAG) == GID_HORIZONTAL_FLIP_FLAG
+    }
+
+    /// Return whether this tile is flipped vertically or not
+    pub fn flip_vertical(&self) -> bool {
+        (self.as_raw() & GID_VERTICAL_FLIP_FLAG) == GID_VERTICAL_FLIP_FLAG
+    }
+
+    /// Return whether this tile is flipped diagonally or not
+    pub fn flip_diagonal(&self) -> bool {
+        (self.as_raw() & GID_DIAGONAL_FLIP_FLAG) == GID_DIAGONAL_FLIP_FLAG
+    }
+}
 
 impl std::str::FromStr for GID {
     type Err = Error;
@@ -753,18 +791,21 @@ impl Map {
         Ok(map)
     }
 
-    /// Fetch the image that belongs to a given GID. Returns the image and the pixel coordinates
-    /// where the tile image is inside of that image.
+    /// Fetch the image that belongs to a given GID.
+    /// Returns the image and the pixel coordinates where the tile image is inside of that image.
+    ///
+    /// Important: To correctly draw the tile,
+    ///     inspect the [GID] passed to this function to lookup information if/how the tile should
+    ///     be flipped.
     pub fn tile_image(&self, id: GID) -> Option<(&dyn std::any::Any, math::Rect)> {
         use math::ivec2;
         let tileset = self.tilesets.iter().rfind(|t| t.firstgid <= id)?;
-
 
         let size = ivec2::new(tileset.tile_size.x, tileset.tile_size.y);
         let stride = tileset.spacing as i32;
         let stride = size + ivec2::new(stride, stride);
 
-        let lid = (id.0.get() - tileset.firstgid.0.get()) as i32;
+        let lid = (id.to_id() - tileset.firstgid.to_id()) as i32;
         let tile_id = ivec2::new(lid % tileset.columns as i32, lid / tileset.columns as i32);
         let upper_left = ivec2::new(tileset.margin as i32, tileset.margin as i32) + tile_id * stride;
 

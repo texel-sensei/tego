@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `tintcolor` of tile layers is now loaded
 - The `color` and `tintcolor` of object layers is loaded
 - The `tintcolor` of group layers is now loaded
+- It is now possible to lookup if a tile was flipped:
+	`GID::flip_horizontal()`, `GID::flip_vertical()`, `GID::flip_diagonal()`
+
+### Fixed
+- `Map::tile_image()` no longer panics if the map contains tiles that have been flipped
 
 ## [0.3.1] - 2021-11-04
 ### Changed

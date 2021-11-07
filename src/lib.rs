@@ -363,6 +363,7 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
 }
 
 /// This enum contains the different types of layers that can be found in a map
+#[non_exhaustive]
 pub enum Layer{
     /// A layer containing a grid of tiles
     Tile(TileLayer),
@@ -427,6 +428,7 @@ impl<'a,'b> Iterator for TileIterator<'a,'b> {
 }
 
 /// A layer to group multiple sub-layers
+#[non_exhaustive]
 pub struct GroupLayer {
     pub id: usize,
     pub name: String,
@@ -462,6 +464,7 @@ impl GroupLayer {
     }
 }
 
+#[non_exhaustive]
 pub struct TileLayer {
     pub id: usize,
     pub name: String,
@@ -539,6 +542,7 @@ impl TileLayer {
 ///
 /// Check the [Tiled Documentation](https://doc.mapeditor.org/en/stable/manual/objects/)
 /// for more information on objects.
+#[non_exhaustive]
 pub struct ObjectLayer {
     pub id: usize,
     pub name: String,
@@ -594,6 +598,7 @@ impl ObjectLayer {
 /// Objects can have different kinds,
 /// (e.g. rect, ellipse, text).
 /// See [ObjectKind] for more info.
+#[non_exhaustive]
 pub struct Object {
     pub id: usize,
     pub name: String,
@@ -635,6 +640,7 @@ impl Object {
     }
 }
 
+#[non_exhaustive]
 pub enum ObjectKind {
     Rect,
     Ellipse,
@@ -708,6 +714,7 @@ impl ObjectKind {
 /// A Map consists of [TileSets](TileSet) and [Layers](Layer).
 /// Stacking the layers in iteration order creates the final map image.
 /// Each layer contains indices ([GIDs](GID)) referencing a specific tile in a tile sets.
+#[non_exhaustive]
 pub struct Map {
     pub version: Version,
     pub editor_version: Option<Version>,

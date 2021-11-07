@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - It is now possible to lookup if a tile was flipped:
 	`GID::flip_horizontal()`, `GID::flip_vertical()`, `GID::flip_diagonal()`
 
+### Changed
+- Most structs with public fields are now marked `#[non_exhaustive]`
+
 ### Fixed
 - `Map::tile_image()` no longer panics if the map contains tiles that have been flipped
 

@@ -31,6 +31,7 @@ fn main() -> tego::Result<()> {
             Object(layer) => {
                 println!("Layer '{}' containing {} objects", layer.name, layer.content.len());
             },
+            _ => { println!("Unknown layer");}
         }
     }
     Ok(())

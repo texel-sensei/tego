@@ -32,6 +32,7 @@ use roxmltree::Document;
 
 mod errors;
 mod resource_manager;
+mod property;
 pub mod math;
 pub use resource_manager::ImageLoader;
 pub use errors::Error;

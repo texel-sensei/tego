@@ -35,6 +35,7 @@ mod resource_manager;
 mod property;
 pub mod math;
 pub use resource_manager::ImageLoader;
+pub use property::PropertyContainer;
 pub use errors::Error;
 pub use errors::Result;
 
@@ -277,6 +278,7 @@ pub struct TileSet {
     pub tilecount: usize,
     pub columns: usize,
     pub image: ImageStorage,
+    pub properties: PropertyContainer,
 }
 
 impl TileSet {
@@ -317,6 +319,7 @@ impl TileSet {
             tilecount: map_attr("tilecount")?.parse()?,
             columns: map_attr("columns")?.parse()?,
             image: image_storage,
+            properties: PropertyContainer::from_xml(node)?,
         })
     }
 }
@@ -437,7 +440,8 @@ pub struct GroupLayer {
     pub opacity: f32,
     pub visible: bool,
     pub tintcolor: Color,
-    pub content: Vec<Layer>
+    pub content: Vec<Layer>,
+    pub properties: PropertyContainer,
 }
 
 impl GroupLayer {
@@ -461,6 +465,7 @@ impl GroupLayer {
             visible: attribute_or(node, "opacity", true)?,
             tintcolor: attribute_or(node, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
             content: content?,
+            properties: PropertyContainer::from_xml(node)?,
         })
     }
 }
@@ -478,7 +483,9 @@ pub struct TileLayer {
     /// lead to the wrong result! The colors must first be converted to the
     /// invervall [0-1] (division by 255).
     pub tintcolor: Color,
-    pub tiles: Vec<Option<GID>>
+    pub tiles: Vec<Option<GID>>,
+
+    pub properties: PropertyContainer,
 }
 
 impl TileLayer {
@@ -520,6 +527,7 @@ impl TileLayer {
             ),
             tintcolor: attribute_or(tmx, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
             tiles: Self::parse_data(&tmx.children().find(|n| n.tag_name().name() == "data").unwrap())?,
+            properties: PropertyContainer::from_xml(tmx)?,
         })
     }
 
@@ -561,6 +569,8 @@ pub struct ObjectLayer {
 
     /// The [Objects](Object) contained in this layer
     pub content: Vec<Object>,
+
+    pub properties: PropertyContainer,
 }
 
 impl ObjectLayer {
@@ -588,7 +598,8 @@ impl ObjectLayer {
             visible: attribute_or(tmx, "opacity", true)?,
             tintcolor: attribute_or(tmx, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
             offset: math::ivec2::from_tmx_or_default(tmx, "offsetx", "offsety")?,
-            content
+            content,
+            properties: PropertyContainer::from_xml(tmx)?,
         })
     }
 
@@ -610,6 +621,7 @@ pub struct Object {
     pub tile_id: Option<GID>,
     pub visible: bool,
     pub kind: ObjectKind,
+    pub properties: PropertyContainer,
 }
 
 impl Object {
@@ -637,6 +649,7 @@ impl Object {
             tile_id,
             visible: attribute_or(tmx, "visible", true)?,
             kind: ObjectKind::from_xml(tmx)?,
+            properties: PropertyContainer::from_xml(tmx)?,
         })
     }
 }
@@ -732,6 +745,9 @@ pub struct Map {
     /// The Layers that make up this map.
     /// The final map image is rendered by stacking the layers in iteration order.
     pub layers: Vec<Layer>,
+
+    /// Custom properties contained in this map.
+    pub properties: PropertyContainer,
 }
 
 impl Map {
@@ -791,7 +807,8 @@ impl Map {
             tilesets,
             backgroundcolor: attribute_or_default(&map_node, "backgroundcolor")?,
             layers:
-                map_node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>()?
+                map_node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>()?,
+            properties: PropertyContainer::from_xml(&map_node)?,
         };
         if map_node.attribute("tiledversion").is_some() {
             map.editor_version = Some(map_attr("tiledversion")?.parse()?);
@@ -925,12 +942,13 @@ mod test {
         macro_rules! layer {
             (tile) => {Tile(TileLayer{
                 id: 0, name: "".into(), size: math::ivec2::new(0,0),
-                tintcolor: Color::default(), tiles: vec![]
+                tintcolor: Color::default(), tiles: vec![],
+                properties: PropertyContainer::new(),
             })};
             (group $layers:expr) => {Group(GroupLayer{
                 id:0, name: "".into(), offset: math::ivec2::new(0,0),
                 opacity: 0., tintcolor: Color::default(), visible:false,
-                content: $layers
+                content: $layers, properties: PropertyContainer::new(),
             })};
         }
 

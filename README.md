@@ -99,4 +99,4 @@ This is not an exhaustive list.
 
 * ❌ Image layers
 
-* ❌ Properties
+* ✅ Properties

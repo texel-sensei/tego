@@ -4,9 +4,18 @@
 use crate::{Color, Error, Result};
 
 /// Reference type to an object stored in this map.
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct ObjectReference(i64);
 
+fn parse_string_value<'a>(tmx: &'a roxmltree::Node) -> &'a str {
+    match tmx.attribute("value") {
+        Some(text) => text,
+        None => tmx.text().unwrap_or_default()
+    }
+}
+
 #[non_exhaustive]
+#[derive(Debug, PartialEq)]
 pub enum PropertyValue {
     String(String),
     Int(i64),
@@ -18,9 +27,11 @@ pub enum PropertyValue {
 }
 
 impl PropertyValue {
+    /// Parse a single property value from an `<property>` xml node
     fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         use PropertyValue::*;
 
+        // Helper to parse a value if the attribute "value" exists or return the default if not
         macro_rules! parse {
             () => {
                 tmx.attribute("value").map(|t| t.parse()).transpose()?.unwrap_or_default()
@@ -28,13 +39,13 @@ impl PropertyValue {
         }
 
         match tmx.attribute("type").unwrap_or("string") {
-            "string" => todo!{},
+            "string" => Ok(String(parse_string_value(tmx).into())),
             "int" => Ok(Int(parse!())),
             "float" => Ok(Float(parse!())),
             "bool" => Ok(Bool(parse!())),
             "color" => Ok(Color(parse!())),
-            "file" => todo!{},
-            "object" => todo!{},
+            "file" => Ok(File(tmx.attribute("value").unwrap_or_default().into())),
+            "object" => Ok(Object(ObjectReference(parse!()))),
             other => Err(Error::StructureError{
                     tag: tmx.tag_name().name().into(),
                     msg: format!(
@@ -47,6 +58,7 @@ impl PropertyValue {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Property {
     pub name: String,
     pub value: PropertyValue,
@@ -57,11 +69,14 @@ pub struct PropertyContainer {
 }
 
 impl PropertyContainer {
+
+    pub(crate) fn new() -> Self { Self{ properties: Vec::new() } }
+
     /// Parse the properties from an tmx xml node.
     /// This function takes any node in the tmx file that supports properties
     /// and looks for a child node "properties".
     pub(crate) fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
-        let mut container = PropertyContainer{properties: Vec::new()};
+        let mut container = Self::new();
 
         let properties = tmx.children().find(|c| c.tag_name().name() == "properties");
 
@@ -70,7 +85,7 @@ impl PropertyContainer {
         }
         let properties = properties.unwrap();
 
-        for property in properties.children() {
+        for property in properties.children().filter(|c| c.tag_name().name() == "property") {
             let name = match property.attribute("name") {
                 Some(name) => name,
                 None => return Err(
@@ -85,5 +100,47 @@ impl PropertyContainer {
         }
 
         Ok(container)
+    }
+
+    /// Iterate over all the properties stored in this container.
+    pub fn iter(&self) -> impl Iterator<Item=&Property> {
+        self.properties.iter()
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_property_parser() {
+        let tmx = r##"
+            <map>
+                <properties>
+                    <property name="all_defaults"/>
+                    <property name="string_value" type="string" value="Hello"/>
+                    <property name="color_value" type="color" value="#FFcc00"/>
+                    <property name="contained_text">Hello World</property>
+                </properties>
+            </map>
+        "##;
+
+        let tmx = roxmltree::Document::parse(tmx).unwrap();
+
+        let properties = PropertyContainer::from_xml(&tmx.root_element()).unwrap();
+        let properties: Vec<_> = properties.iter().collect();
+
+        assert_eq!(properties.len(), 4);
+        use PropertyValue::*;
+        assert_eq!(
+            properties,
+            vec![
+                &Property{name: "all_defaults".into(), value: String("".into())},
+                &Property{name: "string_value".into(), value: String("Hello".into())},
+                &Property{name: "color_value".into(), value: Color(crate::Color::from_argb(0xFF, 0xFF, 0xCC, 0x00))},
+                &Property{name: "contained_text".into(), value: String("Hello World".into())},
+            ]
+        );
     }
 }

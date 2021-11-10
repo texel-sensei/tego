@@ -13,12 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - It is now possible to lookup if a tile was flipped:
 	`GID::flip_horizontal()`, `GID::flip_vertical()`, `GID::flip_diagonal()`
 - Support loading custom properties
+- ResourceManager class for better handling of external resources
 
 ### Changed
 - Most structs with public fields are now marked `#[non_exhaustive]`
+- The functions `Map::from_file_with_loader()` and `Map::from_xml_str()` now take an ResourceManager
+  parameter instead of an ImageLoader
 
 ### Fixed
 - `Map::tile_image()` no longer panics if the map contains tiles that have been flipped
+- Loading maps now correctly calculates relative paths in relation to the map file and not the
+  current working directory
 
 ## [0.3.1] - 2021-11-04
 ### Changed

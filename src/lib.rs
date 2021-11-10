@@ -34,7 +34,7 @@ mod errors;
 mod resource_manager;
 mod property;
 pub mod math;
-pub use resource_manager::ImageLoader;
+pub use resource_manager::{ResourceManager, ImageLoader, Provider, FileProvider};
 pub use property::PropertyContainer;
 pub use errors::Error;
 pub use errors::Result;
@@ -282,7 +282,7 @@ pub struct TileSet {
 }
 
 impl TileSet {
-    pub fn from_xml(node: &roxmltree::Node, loader: &mut dyn ImageLoader) -> Result<Self> {
+    pub fn from_xml(node: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
         let map_attr = |name: &str| {
             node.attribute(name).ok_or_else(||{Error::StructureError{
                 tag: node.tag_name().name().to_string(),
@@ -298,7 +298,7 @@ impl TileSet {
         use ImageStorage::*;
         if let Some(image) = node.children().filter(|n| n.tag_name().name() == "image").next() {
             image_storage = SpriteSheet(
-                loader.load(image.attribute("source").ok_or_else(|| Error::StructureError{
+                loader.load_image(image.attribute("source").ok_or_else(|| Error::StructureError{
                     tag: image.tag_name().name().into(),
                     msg: "Missing 'source' tag on image".into(),
                 })?)?
@@ -752,21 +752,22 @@ pub struct Map {
 
 impl Map {
     pub fn from_file(path: &std::path::Path) -> Result<Self> {
-        let mut loader = resource_manager::LazyLoader {};
-        Self::from_file_with_loader(path, &mut loader)
+        Self::from_file_with_loader(path, &mut ResourceManager::default())
     }
 
-    pub fn from_file_with_loader(path: &std::path::Path, image_loader: &mut dyn resource_manager::ImageLoader) -> Result<Self> {
+    pub fn from_file_with_loader(path: &std::path::Path, resource_manager: &mut ResourceManager) -> Result<Self> {
         let mut file = File::open(path)?;
 
+        // TODO(texel, 2021-11-10): Change to use resource manager
         let mut file_xml = String::new();
         file.read_to_string(&mut file_xml)?;
 
-        Self::from_xml_str(&file_xml, image_loader)
+        resource_manager.set_base_path(path.parent().unwrap_or(path).to_string_lossy().to_string());
+        Self::from_xml_str(&file_xml, resource_manager)
     }
 
     /// Parse a map from xml data
-    pub fn from_xml_str(tmx: &str, image_loader: &mut dyn resource_manager::ImageLoader) -> Result<Self> {
+    pub fn from_xml_str(tmx: &str, resource_manager: &mut ResourceManager) -> Result<Self> {
         let document = Document::parse(&tmx)?;
 
         let map_node = document.root_element();
@@ -787,7 +788,7 @@ impl Map {
 
         let tilesets = map_node.children()
             .filter(|n| n.tag_name().name() == "tileset")
-            .map(|n| TileSet::from_xml(&n, image_loader))
+            .map(|n| TileSet::from_xml(&n, resource_manager))
             .collect::<Result<Vec<_>>>()?
         ;
 
@@ -925,7 +926,7 @@ mod test {
             />
         "#;
 
-        let map = Map::from_xml_str(&map_xml, &mut resource_manager::LazyLoader{})?;
+        let map = Map::from_xml_str(&map_xml, &mut ResourceManager::default())?;
         assert_eq!(map.renderorder, Renderorder::RightDown);
         Ok(())
     }

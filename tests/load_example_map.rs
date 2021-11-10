@@ -13,7 +13,8 @@ fn load_default_example_map() {
     assert_eq!(map.tilesets.len(), 1);
     assert!(matches!(
         &map.tilesets[0].image,
-        ImageStorage::SpriteSheet(path) if path.downcast_ref::<String>().unwrap() == "tiles.png"
+        ImageStorage::SpriteSheet(path)
+        if path.downcast_ref::<String>().unwrap() == "example-maps/default/tiles.png"
     ));
 
     if let Layer::Tile(layer) = &map.layers[0] {

@@ -53,7 +53,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = &args[1];
     let output = &args[2];
 
-    let map = tego::Map::from_file_with_loader(Path::new(input), &mut ImageLoader::new())?;
+    let mut loader = tego::ResourceManager::new(ImageLoader::new(), tego::FileProvider{});
+    let map = tego::Map::from_file_with_loader(Path::new(input), &mut loader)?;
 
     let resolution = map.size * map.tile_size;
     let mut buffer = RgbaImage::new(resolution.x as u32, resolution.y as u32);

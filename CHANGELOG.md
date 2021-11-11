@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 	`GID::flip_horizontal()`, `GID::flip_vertical()`, `GID::flip_diagonal()`
 - Support loading custom properties
 - ResourceManager class for better handling of external resources
+- Support for external tileset files (`*.tsx`)
 
 ### Changed
 - Most structs with public fields are now marked `#[non_exhaustive]`

@@ -79,7 +79,7 @@ This is not an exhaustive list.
 * 🚧 Tile Sets
     * ✅ Metadata
     * ✅ Sprite Sheet lookup with spacing/margin
-    * ❌ External tile set files (`*.tsx`)
+    * ✅ External tile set files (`*.tsx`)
     * ❌ Image collection Tile Sets
     * ❌ Object Alignment information
 

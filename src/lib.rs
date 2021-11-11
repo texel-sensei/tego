@@ -226,6 +226,17 @@ impl std::str::FromStr for GID {
     }
 }
 
+fn attribute<T>(node: &roxmltree::Node, name: &str) -> Result<T>
+    where T: std::str::FromStr,
+          T::Err: std::error::Error + 'static,
+          Error: From<<T as std::str::FromStr>::Err>
+{
+    Ok(node.attribute(name).ok_or_else(||{Error::StructureError{
+        tag: node.tag_name().name().to_string(),
+        msg: format!("Required attribute '{}' missing", name)
+    }})?.parse()?)
+}
+
 fn attribute_or<T>(node: &roxmltree::Node, name: &str, alternative: T) -> Result<T>
     where T: Copy + std::str::FromStr,
           T::Err: std::error::Error + 'static
@@ -283,20 +294,23 @@ pub struct TileSet {
 
 impl TileSet {
     pub fn from_xml(node: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
-        let map_attr = |name: &str| {
-            node.attribute(name).ok_or_else(||{Error::StructureError{
-                tag: node.tag_name().name().to_string(),
-                msg: format!("Required attribute '{}' missing", name)
-            }})
-        };
+        let mut data_node = *node;
+
+        // Need those two for lifetime reasons related to data_node
+        #[allow(unused_assignments)]
+        let mut extern_document = None;
+        #[allow(unused_assignments)]
+        let mut extern_text = None;
 
         if let Some(source) = node.attribute("source") {
-            return Err(Error::UnsupportedFeature(format!("Extern tileset at: {}", source)));
+            extern_text = Some(loader.load_text(source)?);
+            extern_document = Some(roxmltree::Document::parse(extern_text.as_ref().unwrap())?);
+            data_node = extern_document.as_ref().unwrap().root_element();
         }
 
         let image_storage;
         use ImageStorage::*;
-        if let Some(image) = node.children().filter(|n| n.tag_name().name() == "image").next() {
+        if let Some(image) = data_node.children().filter(|n| n.tag_name().name() == "image").next() {
             image_storage = SpriteSheet(
                 loader.load_image(image.attribute("source").ok_or_else(|| Error::StructureError{
                     tag: image.tag_name().name().into(),
@@ -308,18 +322,18 @@ impl TileSet {
         }
 
         Ok(Self{
-            firstgid: map_attr("firstgid")?.parse()?,
-            name: map_attr("name")?.into(),
+            firstgid: attribute(node, "firstgid")?,
+            name: attribute(&data_node, "name")?,
             tile_size: math::ivec2::new(
-                map_attr("tilewidth")?.parse()?,
-                map_attr("tileheight")?.parse()?
+                attribute(&data_node, "tilewidth")?,
+                attribute(&data_node, "tileheight")?
             ),
-            spacing: attribute_or_default(node, "spacing")?,
-            margin: attribute_or_default(node, "margin")?,
-            tilecount: map_attr("tilecount")?.parse()?,
-            columns: map_attr("columns")?.parse()?,
+            spacing: attribute_or_default(&data_node, "spacing")?,
+            margin: attribute_or_default(&data_node, "margin")?,
+            tilecount: attribute(&data_node, "tilecount")?,
+            columns: attribute(&data_node, "columns")?,
             image: image_storage,
-            properties: PropertyContainer::from_xml(node)?,
+            properties: PropertyContainer::from_xml(&data_node)?,
         })
     }
 }

@@ -44,3 +44,9 @@ impl From<std::str::ParseBoolError> for Error {
         Error::ParseError(Box::new(e))
     }
 }
+
+impl From<std::convert::Infallible> for Error {
+    fn from(_: std::convert::Infallible) -> Self {
+        unreachable!{};
+    }
+}

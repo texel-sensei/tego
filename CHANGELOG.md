@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Most structs with public fields are now marked `#[non_exhaustive]`
 - The functions `Map::from_file_with_loader()` and `Map::from_xml_str()` now take an ResourceManager
   parameter instead of an ImageLoader
+- The `id` attribute of the different layers variants is now optional. This allows loading of maps
+  created with Tiled prior to version 1.2
 
 ### Fixed
 - `Map::tile_image()` no longer panics if the map contains tiles that have been flipped

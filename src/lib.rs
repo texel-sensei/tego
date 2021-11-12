@@ -448,7 +448,7 @@ impl<'a,'b> Iterator for TileIterator<'a,'b> {
 /// A layer to group multiple sub-layers
 #[non_exhaustive]
 pub struct GroupLayer {
-    pub id: usize,
+    pub id: Option<usize>,
     pub name: String,
     pub offset: math::ivec2,
     pub opacity: f32,
@@ -462,17 +462,11 @@ impl GroupLayer {
     /// Load a group layer from a TMX "group" node
     pub fn from_xml(node: &roxmltree::Node) -> Result<Self> {
         assert_eq!(node.tag_name().name(), "group");
-        let map_attr = |name: &str| {
-            node.attribute(name).ok_or_else(||{Error::StructureError{
-                tag: node.tag_name().name().to_string(),
-                msg: format!("Required attribute '{}' missing", name)
-            }})
-        };
 
         let content = node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>();
 
         Ok(Self{
-            id: map_attr("id")?.parse()?,
+            id: node.attribute("id").map(|t| t.parse()).transpose()?,
             name: node.attribute("name").unwrap_or_default().to_string(),
             offset: math::ivec2::from_tmx_or_default(node, "offsetx", "offsety")?,
             opacity: attribute_or(node, "opacity", 1.)?,
@@ -486,7 +480,7 @@ impl GroupLayer {
 
 #[non_exhaustive]
 pub struct TileLayer {
-    pub id: usize,
+    pub id: Option<usize>,
     pub name: String,
     pub size: math::ivec2,
 
@@ -533,7 +527,7 @@ impl TileLayer {
             }})
         };
         Ok(Self{
-            id: map_attr("id")?.parse()?,
+            id: tmx.attribute("id").map(|t| t.parse()).transpose()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
             size: math::ivec2::new(
                 map_attr("width")?.parse()?,
@@ -567,7 +561,7 @@ impl TileLayer {
 /// for more information on objects.
 #[non_exhaustive]
 pub struct ObjectLayer {
-    pub id: usize,
+    pub id: Option<usize>,
     pub name: String,
 
     /// Color that is used to render [Objects](Object) in this layer.
@@ -591,13 +585,6 @@ impl ObjectLayer {
     pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         assert_eq!(tmx.tag_name().name(), "objectgroup");
 
-        let map_attr = |name: &str| {
-            tmx.attribute(name).ok_or_else(||{Error::StructureError{
-                tag: tmx.tag_name().name().to_string(),
-                msg: format!("Required attribute '{}' missing", name)
-            }})
-        };
-
         let content = tmx.children()
             .filter(|t| t.tag_name().name() == "object")
             .map(|t| Object::from_xml(&t))
@@ -605,7 +592,7 @@ impl ObjectLayer {
         ;
 
         Ok(Self{
-            id: map_attr("id")?.parse()?,
+            id: tmx.attribute("id").map(|t| t.parse()).transpose()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
             color: attribute_or(tmx, "color", Color::from_argb(255, 160, 160, 164))?,
             opacity: attribute_or(tmx, "opacity", 1.)?,

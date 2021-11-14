@@ -122,7 +122,7 @@ def main(argv):
     print("Last chance to abort via ctrl-c")
     input()
 
-    subprocess.run(["git", "push"], check=True)
+    subprocess.run(["git", "push", "--follow-tags"], check=True)
     subprocess.run(["cargo", "publish"], check=True)
 
     return 0

@@ -943,12 +943,12 @@ mod test {
         use Layer::*;
         macro_rules! layer {
             (tile) => {Tile(TileLayer{
-                id: 0, name: "".into(), size: math::ivec2::new(0,0),
+                id: Some(0), name: "".into(), size: math::ivec2::new(0,0),
                 tintcolor: Color::default(), tiles: vec![],
                 properties: PropertyContainer::new(),
             })};
             (group $layers:expr) => {Group(GroupLayer{
-                id:0, name: "".into(), offset: math::ivec2::new(0,0),
+                id: Some(0), name: "".into(), offset: math::ivec2::new(0,0),
                 opacity: 0., tintcolor: Color::default(), visible:false,
                 content: $layers, properties: PropertyContainer::new(),
             })};

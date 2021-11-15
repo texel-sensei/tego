@@ -108,6 +108,19 @@ impl PropertyContainer {
     }
 }
 
+impl std::ops::Index<&str> for PropertyContainer {
+    type Output = Property;
+
+    /// Get the (first) property with the given name if it exists
+    ///
+    /// # Panics
+    /// If the given property does not exist, this function will panic.
+    fn index(&self, index: &str) -> &Self::Output {
+        &self.properties.iter().find(|p| p.name == index)
+            .unwrap_or_else(|| panic!("Property '{}' not found!", index))
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -142,5 +155,25 @@ mod test {
                 &Property{name: "contained_text".into(), value: String("Hello World".into())},
             ]
         );
+    }
+
+    #[test]
+    fn test_property_index_access() {
+        let tmx = r##"
+            <map>
+                <properties>
+                    <property name="all_defaults"/>
+                    <property name="string_value" type="string" value="Hello"/>
+                    <property name="color_value" type="color" value="#FFcc00"/>
+                    <property name="contained_text">Hello World</property>
+                </properties>
+            </map>
+        "##;
+
+        let tmx = roxmltree::Document::parse(tmx).unwrap();
+
+        let properties = PropertyContainer::from_xml(&tmx.root_element()).unwrap();
+        use PropertyValue::*;
+        assert_eq!(properties["all_defaults"], Property{name: "all_defaults".into(), value: String("".into())});
     }
 }

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Added
 - `PropertyContainer` now supports access via `[]` (Index)
+- Properties now provide convenience functions for type casting
 
 ## [0.4.0] - 2021-11-14
 ### Added

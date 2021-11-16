@@ -35,7 +35,7 @@ mod resource_manager;
 mod property;
 pub mod math;
 pub use resource_manager::{ResourceManager, ImageLoader, Provider, FileProvider};
-pub use property::PropertyContainer;
+pub use property::{PropertyContainer, Property};
 pub use errors::Error;
 pub use errors::Result;
 

@@ -18,7 +18,10 @@ pub enum Error {
 
     /// Map uses features that are not (yet) supported
     #[error("Feature not supported: {0}")]
-    UnsupportedFeature(String)
+    UnsupportedFeature(String),
+
+    #[error("The expected property is a different type than expected")]
+    PropertyTypeError,
 }
 
 impl From<roxmltree::Error> for Error {

@@ -64,6 +64,80 @@ pub struct Property {
     pub value: PropertyValue,
 }
 
+impl Property {
+    /// Try to get the value of this property as a [&str].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_str(&self) -> Result<&str> {
+        match &self.value {
+            PropertyValue::String(text) => Ok(&text),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+
+    /// Try to get the value of this property as a [i64].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_i64(&self) -> Result<i64> {
+        match &self.value {
+            PropertyValue::Int(val) => Ok(*val),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+
+    /// Try to get the value of this property as a [f64].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_f64(&self) -> Result<f64> {
+        match &self.value {
+            PropertyValue::Float(val) => Ok(*val),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+
+
+    /// Try to get the value of this property as a [bool].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_bool(&self) -> Result<bool> {
+        match &self.value {
+            PropertyValue::Bool(val) => Ok(*val),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+
+    /// Try to get the value of this property as a [Color].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_color(&self) -> Result<Color> {
+        match &self.value {
+            PropertyValue::Color(val) => Ok(*val),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+
+    /// Try to get the value of this property as a file path.
+    /// This returns the path as a [&str].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_file(&self) -> Result<&str> {
+        match &self.value {
+            PropertyValue::File(val) => Ok(val),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+
+    /// Try to get the value of this property as an [ObjectReference].
+    ///
+    /// Returns a [Error::PropertyTypeError] if it contains a different type.
+    pub fn as_object_ref(&self) -> Result<ObjectReference> {
+        match &self.value {
+            PropertyValue::Object(val) => Ok(*val),
+            _ => Err(Error::PropertyTypeError)
+        }
+    }
+}
+
 pub struct PropertyContainer {
     properties: Vec<Property>
 }

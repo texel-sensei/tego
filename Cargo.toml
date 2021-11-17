@@ -1,6 +1,6 @@
 [package]
 name = "tego"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["texel <texelsensei@posteo.net>"]
 edition = "2021"
 description = "Crate for loading Tiled maps"

@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PropertyContainer` now supports access via `[]` (Index)
 - Properties now provide convenience functions for type casting
 
+### Changed
+- ImageStorage::SpriteSheet now holds the image data as an Rc instead of a Box.
+  This allows for multiple tilesets to share the same image.
+- A ResourceManager now caches the images that have been loaded with it.
+
 ## [0.4.0] - 2021-11-14
 ### Added
 - The `backgroundcolor` property of the Map is now loaded

@@ -24,8 +24,6 @@ fn render_layer(
     for (pos, gid) in layer.tiles_in_renderorder(map).filter(|t| t.1.is_some()) {
         let (img_path, src_rect) = map.tile_image(gid.unwrap()).unwrap();
 
-        // TODO(texel, 2021-10-23): this opens the spritesheet for every single tile,
-        // implement some caching (ideally inside of the map loader)
         let tile_image = img_path.downcast_ref::<RgbaImage>().unwrap();
 
         let tile_sprite = tile_image.view(

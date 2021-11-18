@@ -1,4 +1,4 @@
-use std::{any::Any, io::Read, path::Path};
+use std::{any::Any, collections::HashMap, io::Read, path::Path, rc::Rc};
 
 use crate::{Result, Error};
 
@@ -6,6 +6,7 @@ pub struct ResourceManager {
     base_path: String,
     image_loader: Box<dyn ImageLoader>,
     file_provider: Box<dyn Provider>,
+    image_cache: HashMap<String, Rc<dyn Any>>
 }
 
 impl ResourceManager {
@@ -16,12 +17,22 @@ impl ResourceManager {
             base_path: ".".into(),
             image_loader: Box::new(image_loader),
             file_provider: Box::new(file_provider),
+            image_cache: HashMap::new(),
         }
     }
 
-    pub fn load_image(&mut self, path: &str) -> Result<Box<dyn Any>>{
+    pub fn load_image(&mut self, path: &str) -> Result<Rc<dyn Any>>{
         // TODO(texel, 2021-11-10): Use file provider
-        self.image_loader.load(&format!("{}/{}", &self.base_path, path))
+        let path = format!("{}/{}", &self.base_path, path);
+        let entry = self.image_cache.entry(path.clone());
+        use std::collections::hash_map::Entry::*;
+        Ok(match entry {
+            Occupied(slot) => slot.get().clone(),
+            Vacant(slot) => {
+                let data = self.image_loader.load(&path)?.into();
+                slot.insert(data).clone()
+            },
+        })
     }
 
     pub fn load_text(&mut self, path: &str) -> Result<String> {

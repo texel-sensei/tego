@@ -21,6 +21,7 @@
 //! # Ok::<(),tego::Error>(())
 //! ```
 
+use std::rc::Rc;
 use std::any::Any;
 use std::{fs::File, io::Read};
 use core::num::NonZeroU32;
@@ -277,7 +278,7 @@ impl math::fvec2 {
 
 #[derive(Debug)]
 pub enum ImageStorage {
-    SpriteSheet(Box<dyn Any>),
+    SpriteSheet(Rc<dyn Any>),
 }
 
 pub struct TileSet {

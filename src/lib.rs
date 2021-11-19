@@ -668,8 +668,16 @@ pub enum ObjectKind {
         points: Vec<math::fvec2>
     },
     Text {
-        content: String
-        // todo
+        content: String,
+        pixelsize: i32,
+        wrap: bool,
+        color: Color,
+        bold: bool,
+        italic: bool,
+        underline: bool,
+        strikeout: bool,
+        kerning: bool,
+        // todo valign/halign
     },
 }
 
@@ -715,7 +723,15 @@ impl ObjectKind {
                 }
                 "text" => {
                     return Ok(Text {
-                        content: child.text().unwrap_or_default().into()
+                        content: child.text().unwrap_or_default().into(),
+                        pixelsize: attribute_or(tmx, "pixelsize", 16)?,
+                        wrap: attribute_or_default(tmx, "wrap")?,
+                        color: attribute_or_default(tmx, "color")?,
+                        bold: attribute_or_default(tmx, "bold")?,
+                        italic: attribute_or_default(tmx, "italic")?,
+                        underline: attribute_or_default(tmx, "underline")?,
+                        strikeout: attribute_or_default(tmx, "strikeout")?,
+                        kerning: attribute_or_default(tmx, "kerning")?,
                     });
                 },
                 _ => continue,

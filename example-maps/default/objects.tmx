@@ -9,7 +9,7 @@
     <polygon points="0,0 -3.89092,-34.2771 57.0668,-34.4624 50.3966,22.9749 42.9854,-21.3074"/>
    </object>
    <object id="7" name="Text" x="11.7186" y="119.641" width="91.4375" height="19">
-    <text wrap="1">Hello World</text>
+    <text pixelsize="17" wrap="1" bold="1" italic="1" underline="1" strikeout="1">Hello World</text>
    </object>
   </objectgroup>
  </group>

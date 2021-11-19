@@ -94,7 +94,7 @@ This is not an exhaustive list.
 * 🚧 Object layers
     * ✅ Basic Rect/Ellipse/Point object
     * ✅ Polygons & Polylines
-    * 🚧 Text (Only the text itself is supported, no metadata yet)
+    * 🚧 Text (Some metadata is still not supported, e.g. haling/valign)
     * ❌ Object Templates
 
 * ❌ Image layers

@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="8">
+<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="10">
  <group id="3" name="Group">
   <objectgroup id="4" name="Child Object Layer">
    <object id="5" name="Ellipse" x="45.2087" y="57.8079">
     <ellipse/>
    </object>
-   <object id="6" name="Polygon" x="88.3794" y="90.6027">
-    <polygon points="0,0 -3.89092,-34.2771 57.0668,-34.4624 50.3966,22.9749 42.9854,-21.3074"/>
+   <object id="6" name="Polygon" x="88.5213" y="90.6027">
+    <polygon points="0,0 -4.03284,-34.2771 59.1483,-34.4624 52.2348,22.9749 44.5533,-21.3074"/>
    </object>
    <object id="7" name="Text" x="11.7186" y="119.641" width="91.4375" height="19">
     <text pixelsize="17" wrap="1" bold="1" italic="1" underline="1" strikeout="1">Hello World</text>
    </object>
+   <object id="8" template="Polygon.tx" x="81.3387" y="155.266"/>
+   <object id="9" template="Polygon.tx" x="0.555845" y="184.17"/>
   </objectgroup>
  </group>
  <objectgroup id="2" name="Top Object Layer">

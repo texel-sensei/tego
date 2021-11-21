@@ -627,6 +627,35 @@ pub struct Object {
 }
 
 impl Object {
+
+    fn new(id: usize) -> Self {
+        Object {
+            id,
+            name: String::default(),
+            type_: String::default(),
+            pos: math::fvec2::default(),
+            size: math::fvec2::default(),
+            rotation: f32::default(),
+            tile_id: None,
+            visible: true,
+            kind: ObjectKind::Rect,
+            properties: PropertyContainer::new(),
+        }
+    }
+
+    /// Take an existing Object and update it with the contents of an xml node.
+    fn fill_from_xml(&mut self, tmx: &roxmltree::Node) -> Result<()> {
+        if let Some(id) = tmx.attribute("id") { self.id = id.parse()?; }
+        if let Some(name) = tmx.attribute("name") { self.name = name.parse()?; }
+        if let Some(type_) = tmx.attribute("type_") { self.type_ = type_.parse()?; }
+        // TODO(texel, 2021-11-21): Pos and size
+        if let Some(rotation) = tmx.attribute("rotation") { self.rotation = rotation.parse()?; }
+        if let Some(tile_id) = tmx.attribute("tile_id") { self.tile_id = Some(tile_id.parse()?); }
+        if let Some(visible) = tmx.attribute("visible") { self.visible = visible.parse()?; }
+        // TODO(texel, 2021-11-21): Properties
+        Ok(())
+    }
+
     fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         let map_attr = |name: &str| {
             tmx.attribute(name).ok_or_else(||{Error::StructureError{

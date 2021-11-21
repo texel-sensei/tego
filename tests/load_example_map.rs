@@ -62,7 +62,7 @@ fn load_object_example_map() {
     assert_eq!(object_layers.len(), 2);
 
     let objects = &object_layers[0].content;
-    assert_eq!(objects.len(), 3);
+    assert_eq!(objects.len(), 5);
     assert!(matches!(&objects[0].kind, ObjectKind::Ellipse));
     assert!(matches!(&objects[1].kind, ObjectKind::Polygon{..}));
 

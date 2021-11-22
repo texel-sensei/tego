@@ -648,11 +648,24 @@ impl Object {
         if let Some(id) = tmx.attribute("id") { self.id = id.parse()?; }
         if let Some(name) = tmx.attribute("name") { self.name = name.parse()?; }
         if let Some(type_) = tmx.attribute("type_") { self.type_ = type_.parse()?; }
-        // TODO(texel, 2021-11-21): Pos and size
+        if tmx.attribute("x").is_some() || tmx.attribute("y").is_some() {
+            self.pos = math::fvec2::from_tmx_or_default(tmx, "x", "y")?;
+        }
+        if tmx.attribute("width").is_some() || tmx.attribute("height").is_some() {
+            self.size = math::fvec2::from_tmx_or_default(tmx, "width", "height")?;
+        }
         if let Some(rotation) = tmx.attribute("rotation") { self.rotation = rotation.parse()?; }
         if let Some(tile_id) = tmx.attribute("tile_id") { self.tile_id = Some(tile_id.parse()?); }
         if let Some(visible) = tmx.attribute("visible") { self.visible = visible.parse()?; }
-        // TODO(texel, 2021-11-21): Properties
+
+        let kind = ObjectKind::from_xml(tmx)?;
+        if !matches!(kind, ObjectKind::Rect) {
+            // object kind rect means that there is no kind given.
+            // This fact is used by templates, so we will not overwrite the kind in that case
+            self.kind = kind;
+        }
+
+        self.properties.update_from_xml(tmx)?;
         Ok(())
     }
 
@@ -664,24 +677,11 @@ impl Object {
             }})
         };
 
-        let tile_id = if let Some(txt) = tmx.attribute("gid") {
-            Some(txt.parse()?)
-        } else {
-            None
-        };
+        let mut obj = Self::new(map_attr("id")?.parse()?);
 
-        Ok(Object{
-            id: map_attr("id")?.parse()?,
-            name: attribute_or_default(tmx, "name")?,
-            type_: attribute_or_default(tmx, "type")?,
-            pos: math::fvec2::from_tmx_or_default(tmx, "x", "y")?,
-            size: math::fvec2::from_tmx_or_default(tmx, "width", "height")?,
-            rotation: attribute_or_default(tmx, "rotation")?,
-            tile_id,
-            visible: attribute_or(tmx, "visible", true)?,
-            kind: ObjectKind::from_xml(tmx)?,
-            properties: PropertyContainer::from_xml(tmx)?,
-        })
+        obj.fill_from_xml(tmx)?;
+
+        Ok(obj)
     }
 }
 

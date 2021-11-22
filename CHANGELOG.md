@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ImageStorage::SpriteSheet now holds the image data as an Rc instead of a Box.
   This allows for multiple tilesets to share the same image.
 - A ResourceManager now caches the images that have been loaded with it.
+- The order of properties returned by PropertyContainer::iter() is no longer
+  necessarily the same order as it is in the tmx file.
+- If multiple properties have the same name, they are no longer all included in
+  the output of PropertyContainer::iter(), only the last one. This was changed
+  because the semantic of having multiple properties combined with objects was
+  unclear.
 
 ## [0.4.0] - 2021-11-14
 ### Added

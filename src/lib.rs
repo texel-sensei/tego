@@ -401,12 +401,12 @@ pub enum Layer{
 }
 
 impl Layer {
-    pub fn try_from_xml(node: &roxmltree::Node) -> Option<Result<Self>> {
+    pub fn try_from_xml(node: &roxmltree::Node, loader: &mut ResourceManager) -> Option<Result<Self>> {
         use Layer::*;
         match node.tag_name().name() {
             "layer" => Some(TileLayer::from_xml(node).map(|l| Tile(l))),
-            "group" => Some(GroupLayer::from_xml(node).map(|l| Group(l))),
-            "objectgroup" => Some(ObjectLayer::from_xml(node).map(|l| Object(l))),
+            "group" => Some(GroupLayer::from_xml(node, loader).map(|l| Group(l))),
+            "objectgroup" => Some(ObjectLayer::from_xml(node, loader).map(|l| Object(l))),
             _ => None,
         }
     }
@@ -461,10 +461,10 @@ pub struct GroupLayer {
 
 impl GroupLayer {
     /// Load a group layer from a TMX "group" node
-    pub fn from_xml(node: &roxmltree::Node) -> Result<Self> {
+    pub fn from_xml(node: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
         assert_eq!(node.tag_name().name(), "group");
 
-        let content = node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>();
+        let content = node.children().filter_map(|c| Layer::try_from_xml(&c, loader)).collect::<Result<Vec<_>>>();
 
         Ok(Self{
             id: node.attribute("id").map(|t| t.parse()).transpose()?,
@@ -583,12 +583,12 @@ pub struct ObjectLayer {
 }
 
 impl ObjectLayer {
-    pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
+    pub fn from_xml(tmx: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
         assert_eq!(tmx.tag_name().name(), "objectgroup");
 
         let content = tmx.children()
             .filter(|t| t.tag_name().name() == "object")
-            .map(|t| Object::from_xml(&t))
+            .map(|t| Object::from_xml(&t, loader))
             .collect::<Result<_>>()?
         ;
 
@@ -613,6 +613,7 @@ impl ObjectLayer {
 /// (e.g. rect, ellipse, text).
 /// See [ObjectKind] for more info.
 #[non_exhaustive]
+#[derive(Clone)]
 pub struct Object {
     pub id: usize,
     pub name: String,
@@ -669,7 +670,7 @@ impl Object {
         Ok(())
     }
 
-    fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
+    fn from_xml(tmx: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
         let map_attr = |name: &str| {
             tmx.attribute(name).ok_or_else(||{Error::StructureError{
                 tag: tmx.tag_name().name().to_string(),
@@ -677,7 +678,15 @@ impl Object {
             }})
         };
 
-        let mut obj = Self::new(map_attr("id")?.parse()?);
+        let id = map_attr("id")?.parse()?;
+
+        let mut obj = if let Some(template) = tmx.attribute("template") {
+            let mut tmp = loader.load_object_template(template)?;
+            tmp.id = id;
+            tmp
+        } else {
+            Self::new(id)
+        };
 
         obj.fill_from_xml(tmx)?;
 
@@ -686,6 +695,7 @@ impl Object {
 }
 
 #[non_exhaustive]
+#[derive(Clone)]
 pub enum ObjectKind {
     Rect,
     Ellipse,
@@ -855,7 +865,7 @@ impl Map {
             tilesets,
             backgroundcolor: attribute_or_default(&map_node, "backgroundcolor")?,
             layers:
-                map_node.children().filter_map(|c| Layer::try_from_xml(&c)).collect::<Result<Vec<_>>>()?,
+                map_node.children().filter_map(|c| Layer::try_from_xml(&c, resource_manager)).collect::<Result<Vec<_>>>()?,
             properties: PropertyContainer::from_xml(&map_node)?,
         };
         if map_node.attribute("tiledversion").is_some() {

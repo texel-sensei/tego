@@ -17,7 +17,7 @@ fn parse_string_value<'a>(tmx: &'a roxmltree::Node) -> &'a str {
 }
 
 #[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PropertyValue {
     String(String),
     Int(i64),
@@ -60,7 +60,7 @@ impl PropertyValue {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Property {
     pub name: String,
     pub value: PropertyValue,
@@ -140,6 +140,7 @@ impl Property {
     }
 }
 
+#[derive(Clone)]
 pub struct PropertyContainer {
     properties: HashMap<String, Property>,
 }

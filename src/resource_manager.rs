@@ -1,12 +1,13 @@
 use std::{any::Any, collections::HashMap, io::Read, path::Path, rc::Rc};
 
-use crate::{Result, Error};
+use crate::{Result, Error, Object};
 
 pub struct ResourceManager {
     base_path: String,
     image_loader: Box<dyn ImageLoader>,
     file_provider: Box<dyn Provider>,
-    image_cache: HashMap<String, Rc<dyn Any>>
+    image_cache: HashMap<String, Rc<dyn Any>>,
+    template_cache: HashMap<String, Object>
 }
 
 impl ResourceManager {
@@ -18,6 +19,7 @@ impl ResourceManager {
             image_loader: Box::new(image_loader),
             file_provider: Box::new(file_provider),
             image_cache: HashMap::new(),
+            template_cache: HashMap::new(),
         }
     }
 
@@ -31,6 +33,26 @@ impl ResourceManager {
             Vacant(slot) => {
                 let data = self.image_loader.load(&path)?.into();
                 slot.insert(data).clone()
+            },
+        })
+    }
+
+    pub fn load_object_template(&mut self, relpath: &str) -> Result<Object> {
+        let path = format!("{}/{}", &self.base_path, relpath);
+        let entry = self.template_cache.entry(path.clone());
+        use std::collections::hash_map::Entry::*;
+        Ok(match entry {
+            Occupied(slot) => slot.get().clone(),
+            Vacant(slot) => {
+                // inlined self.load_text to make the borrow checker happy
+                let template_text = {
+                    let data = self.file_provider.read(&self.base_path, &relpath)?;
+                    Ok::<_, Error>(String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))?)
+                }?;
+                let tmx = roxmltree::Document::parse(&template_text)?;
+                let mut result = Object::new(0);
+                result.fill_from_xml(&tmx.root_element())?;
+                slot.insert(result).clone()
             },
         })
     }

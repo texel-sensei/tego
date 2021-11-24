@@ -76,4 +76,16 @@ fn load_object_example_map() {
     assert_eq!(objects.len(), 2);
     assert!(matches!(&objects[0].kind, ObjectKind::Rect));
     assert!(matches!(&objects[1].kind, ObjectKind::Point));
+
+    let objects = &object_layers[0].content;
+    // An object that gets its values from a template
+    let template_polygon = objects.iter().find(|o| o.id == 9).expect("Test polygon missing");
+    // An object that overwrites parts of the template
+    let special_polygon = objects.iter().find(|o| o.id == 8).expect("Test polygon missing");
+
+    assert_eq!(template_polygon.name, "Polygon");
+    assert_eq!(special_polygon.name, "Special Polygon");
+
+    assert_eq!(template_polygon.properties["Overwrite"], PropertyValue::String("Template".into()));
+    assert_eq!(special_polygon.properties["Overwrite"], PropertyValue::String("Specialization".into()));
 }

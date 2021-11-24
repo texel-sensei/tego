@@ -11,7 +11,12 @@
    <object id="7" name="Text" x="11.7186" y="119.641" width="91.4375" height="19">
     <text pixelsize="17" wrap="1" bold="1" italic="1" underline="1" strikeout="1">Hello World</text>
    </object>
-   <object id="8" template="Polygon.tx" x="81.3387" y="155.266"/>
+   <object id="8" template="Polygon.tx" name="Special Polygon" x="81.3387" y="155.266">
+    <properties>
+     <property name="Overwrite" value="Specialization"/>
+     <property name="The Answer" type="int" value="42"/>
+    </properties>
+   </object>
    <object id="9" template="Polygon.tx" x="0.555845" y="184.17"/>
   </objectgroup>
  </group>

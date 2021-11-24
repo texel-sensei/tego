@@ -140,7 +140,7 @@ impl Property {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PropertyContainer {
     properties: HashMap<String, Property>,
 }
@@ -196,14 +196,14 @@ impl PropertyContainer {
 }
 
 impl std::ops::Index<&str> for PropertyContainer {
-    type Output = Property;
+    type Output = PropertyValue;
 
     /// Get the (first) property with the given name if it exists
     ///
     /// # Panics
     /// If the given property does not exist, this function will panic.
     fn index(&self, index: &str) -> &Self::Output {
-        &self.properties[index]
+        &self.properties[index].value
     }
 }
 
@@ -260,7 +260,6 @@ mod test {
         let tmx = roxmltree::Document::parse(tmx).unwrap();
 
         let properties = PropertyContainer::from_xml(&tmx.root_element()).unwrap();
-        use PropertyValue::*;
-        assert_eq!(properties["all_defaults"], Property{name: "all_defaults".into(), value: String("".into())});
+        assert_eq!(properties["all_defaults"], PropertyValue::String("".into()));
     }
 }

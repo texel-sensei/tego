@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Properties now provide convenience functions for type casting
 - Load most attributes on text objects (except for halign/valign)
 - Support for object templates
+- Objects (and properties) now implement `Debug`
 
 ### Changed
 - ImageStorage::SpriteSheet now holds the image data as an Rc instead of a Box.

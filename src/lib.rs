@@ -36,7 +36,7 @@ mod resource_manager;
 mod property;
 pub mod math;
 pub use resource_manager::{ResourceManager, ImageLoader, Provider, FileProvider};
-pub use property::{PropertyContainer, Property};
+pub use property::{PropertyContainer, Property, PropertyValue};
 pub use errors::Error;
 pub use errors::Result;
 
@@ -613,7 +613,7 @@ impl ObjectLayer {
 /// (e.g. rect, ellipse, text).
 /// See [ObjectKind] for more info.
 #[non_exhaustive]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Object {
     pub id: usize,
     pub name: String,
@@ -695,7 +695,7 @@ impl Object {
 }
 
 #[non_exhaustive]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ObjectKind {
     Rect,
     Ellipse,

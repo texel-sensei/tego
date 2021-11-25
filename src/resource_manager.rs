@@ -49,9 +49,20 @@ impl ResourceManager {
                     let data = self.file_provider.read(&self.base_path, &relpath)?;
                     Ok::<_, Error>(String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))?)
                 }?;
+
+                // parse xml and grab first object node
                 let tmx = roxmltree::Document::parse(&template_text)?;
+                let root = tmx.root_element();
+                let object_node = root
+                    .children()
+                    .find(|c| c.tag_name().name() == "object")
+                    .ok_or(Error::StructureError{
+                        tag: root.tag_name().name().into(),
+                        msg: "Expected an 'object' node in template, but none was found".into()
+                    })?;
+
                 let mut result = Object::new(0);
-                result.fill_from_xml(&tmx.root_element())?;
+                result.fill_from_xml(&object_node)?;
                 slot.insert(result).clone()
             },
         })

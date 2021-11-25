@@ -646,6 +646,8 @@ impl Object {
 
     /// Take an existing Object and update it with the contents of an xml node.
     fn fill_from_xml(&mut self, tmx: &roxmltree::Node) -> Result<()> {
+        assert_eq!(tmx.tag_name().name(), "object");
+
         if let Some(id) = tmx.attribute("id") { self.id = id.parse()?; }
         if let Some(name) = tmx.attribute("name") { self.name = name.parse()?; }
         if let Some(type_) = tmx.attribute("type_") { self.type_ = type_.parse()?; }
@@ -671,6 +673,8 @@ impl Object {
     }
 
     fn from_xml(tmx: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
+        assert_eq!(tmx.tag_name().name(), "object");
+
         let map_attr = |name: &str| {
             tmx.attribute(name).ok_or_else(||{Error::StructureError{
                 tag: tmx.tag_name().name().to_string(),

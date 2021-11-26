@@ -5,11 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-
-## [0.4.1] - 2021-11-17
 ### Added
-- `PropertyContainer` now supports access via `[]` (Index)
-- Properties now provide convenience functions for type casting
 - Load most attributes on text objects (except for halign/valign)
 - Support for object templates
 - Objects (and properties) now implement `Debug`
@@ -20,10 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A ResourceManager now caches the images that have been loaded with it.
 - The order of properties returned by PropertyContainer::iter() is no longer
   necessarily the same order as it is in the tmx file.
+- Indexing a `PropertyContainer` now returns `PropertyValue`s instead of
+  Property objects.
 - If multiple properties have the same name, they are no longer all included in
   the output of PropertyContainer::iter(), only the last one. This was changed
   because the semantic of having multiple properties combined with objects was
   unclear.
+
+## [0.4.1] - 2021-11-17
+### Added
+- `PropertyContainer` now supports access via `[]` (Index)
+- Properties now provide convenience functions for type casting
 
 ## [0.4.0] - 2021-11-14
 ### Added

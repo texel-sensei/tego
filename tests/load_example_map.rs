@@ -89,3 +89,10 @@ fn load_object_example_map() {
     assert_eq!(template_polygon.properties["Overwrite"], PropertyValue::String("Template".into()));
     assert_eq!(special_polygon.properties["Overwrite"], PropertyValue::String("Specialization".into()));
 }
+
+#[test]
+fn load_image_example_map() {
+    let map = Map::from_file(Path::new("example-maps/default/image_layer.tmx")).unwrap();
+
+    assert_eq!(map.layers.len(), 1);
+}

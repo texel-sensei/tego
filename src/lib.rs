@@ -398,6 +398,9 @@ pub enum Layer{
     ///
     /// Object layers are also called object  groups.
     Object(ObjectLayer),
+
+    /// A layer containing a single image
+    Image(ImageLayer),
 }
 
 impl Layer {
@@ -407,6 +410,7 @@ impl Layer {
             "layer" => Some(TileLayer::from_xml(node).map(|l| Tile(l))),
             "group" => Some(GroupLayer::from_xml(node, loader).map(|l| Group(l))),
             "objectgroup" => Some(ObjectLayer::from_xml(node, loader).map(|l| Object(l))),
+            "imagelayer" => Some(ImageLayer::from_xml(node, loader).map(|l| Image(l))),
             _ => None,
         }
     }
@@ -781,6 +785,19 @@ impl ObjectKind {
             }
         }
         Ok(Rect)
+    }
+}
+
+#[non_exhaustive]
+pub struct ImageLayer {
+   // todo
+}
+
+impl ImageLayer {
+    fn from_xml(tmx: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
+        Ok(ImageLayer{
+            // todo
+        })
     }
 }
 

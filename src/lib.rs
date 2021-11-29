@@ -790,13 +790,26 @@ impl ObjectKind {
 
 #[non_exhaustive]
 pub struct ImageLayer {
-   // todo
+    pub id: Option<usize>,
+    pub name: String,
+    pub offset: math::ivec2,
+    pub opacity: f32,
+    pub visible: bool,
+    pub tintcolor: Color,
+    // todo: actual image data
+    pub properties: PropertyContainer,
 }
 
 impl ImageLayer {
-    fn from_xml(tmx: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
+    fn from_xml(tmx: &roxmltree::Node, _loader: &mut ResourceManager) -> Result<Self> {
         Ok(ImageLayer{
-            // todo
+            id: tmx.attribute("id").map(|t| t.parse()).transpose()?,
+            name: tmx.attribute("name").unwrap_or_default().to_string(),
+            offset: math::ivec2::from_tmx_or_default(tmx, "offsetx", "offsety")?,
+            opacity: attribute_or(tmx, "opacity", 1.)?,
+            visible: attribute_or(tmx, "opacity", true)?,
+            tintcolor: attribute_or(tmx, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
+            properties: PropertyContainer::from_xml(tmx)?,
         })
     }
 }

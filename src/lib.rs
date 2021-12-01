@@ -276,6 +276,16 @@ impl math::fvec2 {
     }
 }
 
+pub struct Image {
+    /// Underlying image object, concrete type depends on the [ImageLoader]
+    pub data: Rc<dyn Any>,
+
+    /// Color which is treated as transparent.
+    pub transparent: Option<Color>,
+
+    pub size: Option<math::ivec2>,
+}
+
 #[derive(Debug)]
 pub enum ImageStorage {
     SpriteSheet(Rc<dyn Any>),

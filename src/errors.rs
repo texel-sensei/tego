@@ -6,7 +6,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     /// An error in the structure of the data, e.g. a required tag is missing.
     #[error(r#"Error in the map data at '{tag}': "{msg}""#)]
-    StructureError{ tag: String, msg: String },
+    StructureError { tag: String, msg: String },
 
     /// An error that happened while parsing the map, e.g. the tmx file is not valid xml.
     #[error(transparent)]
@@ -50,6 +50,6 @@ impl From<std::str::ParseBoolError> for Error {
 
 impl From<std::convert::Infallible> for Error {
     fn from(_: std::convert::Infallible) -> Self {
-        unreachable!{};
+        unreachable! {};
     }
 }

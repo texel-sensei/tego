@@ -6,7 +6,7 @@ use tego::*;
 fn load_default_example_map() {
     let map = Map::from_file(Path::new("example-maps/default/default_map.tmx")).unwrap();
 
-    assert_eq!(map.version, Version(1,5,None));
+    assert_eq!(map.version, Version(1, 5, None));
     assert_eq!(map.editor_version, Some(Version(1, 7, Some(2))));
     assert_eq!(map.layers.len(), 1);
 
@@ -55,18 +55,20 @@ fn load_object_example_map() {
 
     let object_layers: Vec<_> = map
         .iter_layers()
-        .filter_map(|(l,_)| match l { Layer::Object(x) => Some(x), _ => None})
-        .collect()
-    ;
+        .filter_map(|(l, _)| match l {
+            Layer::Object(x) => Some(x),
+            _ => None,
+        })
+        .collect();
 
     assert_eq!(object_layers.len(), 2);
 
     let objects = &object_layers[0].content;
     assert_eq!(objects.len(), 5);
     assert!(matches!(&objects[0].kind, ObjectKind::Ellipse));
-    assert!(matches!(&objects[1].kind, ObjectKind::Polygon{..}));
+    assert!(matches!(&objects[1].kind, ObjectKind::Polygon { .. }));
 
-    if let ObjectKind::Text{ content, .. } = &objects[2].kind {
+    if let ObjectKind::Text { content, .. } = &objects[2].kind {
         assert_eq!(content, "Hello World");
     } else {
         panic!("Expected object to be a text object");
@@ -79,15 +81,27 @@ fn load_object_example_map() {
 
     let objects = &object_layers[0].content;
     // An object that gets its values from a template
-    let template_polygon = objects.iter().find(|o| o.id == 9).expect("Test polygon missing");
+    let template_polygon = objects
+        .iter()
+        .find(|o| o.id == 9)
+        .expect("Test polygon missing");
     // An object that overwrites parts of the template
-    let special_polygon = objects.iter().find(|o| o.id == 8).expect("Test polygon missing");
+    let special_polygon = objects
+        .iter()
+        .find(|o| o.id == 8)
+        .expect("Test polygon missing");
 
     assert_eq!(template_polygon.name, "Polygon");
     assert_eq!(special_polygon.name, "Special Polygon");
 
-    assert_eq!(template_polygon.properties["Overwrite"], PropertyValue::String("Template".into()));
-    assert_eq!(special_polygon.properties["Overwrite"], PropertyValue::String("Specialization".into()));
+    assert_eq!(
+        template_polygon.properties["Overwrite"],
+        PropertyValue::String("Template".into())
+    );
+    assert_eq!(
+        special_polygon.properties["Overwrite"],
+        PropertyValue::String("Specialization".into())
+    );
 }
 
 #[test]

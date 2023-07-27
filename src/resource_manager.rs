@@ -1,19 +1,22 @@
 use std::{any::Any, collections::HashMap, io::Read, path::Path, rc::Rc};
 
-use crate::{Result, Error, Object};
+use crate::{Error, Object, Result};
 
 pub struct ResourceManager {
     base_path: String,
     image_loader: Box<dyn ImageLoader>,
     file_provider: Box<dyn Provider>,
     image_cache: HashMap<String, Rc<dyn Any>>,
-    template_cache: HashMap<String, Object>
+    template_cache: HashMap<String, Object>,
 }
 
 impl ResourceManager {
     /// Create a new resource manager with a given image loader and data provider.
     /// Defaults the base path to the current directory (`.`).
-    pub fn new<L: ImageLoader + 'static, P: Provider + 'static>(image_loader: L, file_provider: P) -> Self {
+    pub fn new<L: ImageLoader + 'static, P: Provider + 'static>(
+        image_loader: L,
+        file_provider: P,
+    ) -> Self {
         Self {
             base_path: ".".into(),
             image_loader: Box::new(image_loader),
@@ -23,7 +26,7 @@ impl ResourceManager {
         }
     }
 
-    pub fn load_image(&mut self, path: &str) -> Result<Rc<dyn Any>>{
+    pub fn load_image(&mut self, path: &str) -> Result<Rc<dyn Any>> {
         // TODO(texel, 2021-11-10): Use file provider
         let path = format!("{}/{}", &self.base_path, path);
         let entry = self.image_cache.entry(path.clone());
@@ -33,7 +36,7 @@ impl ResourceManager {
             Vacant(slot) => {
                 let data = self.image_loader.load(&path)?.into();
                 slot.insert(data).clone()
-            },
+            }
         })
     }
 
@@ -47,7 +50,9 @@ impl ResourceManager {
                 // inlined self.load_text to make the borrow checker happy
                 let template_text = {
                     let data = self.file_provider.read(&self.base_path, &relpath)?;
-                    Ok::<_, Error>(String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))?)
+                    Ok::<_, Error>(
+                        String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))?,
+                    )
                 }?;
 
                 // parse xml and grab first object node
@@ -56,15 +61,15 @@ impl ResourceManager {
                 let object_node = root
                     .children()
                     .find(|c| c.tag_name().name() == "object")
-                    .ok_or(Error::StructureError{
+                    .ok_or(Error::StructureError {
                         tag: root.tag_name().name().into(),
-                        msg: "Expected an 'object' node in template, but none was found".into()
+                        msg: "Expected an 'object' node in template, but none was found".into(),
                     })?;
 
                 let mut result = Object::new(0);
                 result.fill_from_xml(&object_node)?;
                 slot.insert(result).clone()
-            },
+            }
         })
     }
 
@@ -86,7 +91,7 @@ impl ResourceManager {
 
 impl Default for ResourceManager {
     fn default() -> Self {
-        ResourceManager::new(LazyLoader{},  FileProvider{})
+        ResourceManager::new(LazyLoader {}, FileProvider {})
     }
 }
 

@@ -21,30 +21,32 @@
 //! # Ok::<(),tego::Error>(())
 //! ```
 
-use std::rc::Rc;
-use std::any::Any;
-use std::{fs::File, io::Read};
 use core::num::NonZeroU32;
+use std::any::Any;
+use std::rc::Rc;
+use std::{fs::File, io::Read};
 
 use base64;
 use roxmltree::Document;
 
-#[macro_use] extern crate impl_ops;
+#[macro_use]
+extern crate impl_ops;
 
 mod errors;
-mod resource_manager;
-mod property;
 pub mod math;
-pub use resource_manager::{ResourceManager, ImageLoader, Provider, FileProvider};
-pub use property::{PropertyContainer, Property, PropertyValue};
+mod property;
+mod resource_manager;
 pub use errors::Error;
 pub use errors::Result;
+pub use property::{Property, PropertyContainer, PropertyValue};
+pub use resource_manager::{FileProvider, ImageLoader, Provider, ResourceManager};
 
 const GID_HORIZONTAL_FLIP_FLAG: u32 = 0x80000000;
-const GID_VERTICAL_FLIP_FLAG: u32   = 0x40000000;
-const GID_DIAGONAL_FLIP_FLAG: u32   = 0x20000000;
+const GID_VERTICAL_FLIP_FLAG: u32 = 0x40000000;
+const GID_DIAGONAL_FLIP_FLAG: u32 = 0x20000000;
 
-const GID_FLIP_MASK: u32 = GID_HORIZONTAL_FLIP_FLAG | GID_VERTICAL_FLIP_FLAG | GID_DIAGONAL_FLIP_FLAG;
+const GID_FLIP_MASK: u32 =
+    GID_HORIZONTAL_FLIP_FLAG | GID_VERTICAL_FLIP_FLAG | GID_DIAGONAL_FLIP_FLAG;
 
 /// Version number consisting out of a MAJOR and MINOR version number, followed by an optional PATCH
 #[derive(Debug, PartialEq, Eq)]
@@ -54,7 +56,7 @@ pub struct Version(
     /// Minor version
     pub u32,
     /// Patch version
-    pub Option<u32>
+    pub Option<u32>,
 );
 
 impl std::str::FromStr for Version {
@@ -64,11 +66,19 @@ impl std::str::FromStr for Version {
         let mut items = s.split('.');
 
         use Error::ParseError;
-        let major = items.next().ok_or(ParseError("Major version is required but missing".into()))?.parse()?;
-        let minor = items.next().ok_or(ParseError("Minor version is required but missing".into()))?.parse()?;
+        let major = items
+            .next()
+            .ok_or(ParseError("Major version is required but missing".into()))?
+            .parse()?;
+        let minor = items
+            .next()
+            .ok_or(ParseError("Minor version is required but missing".into()))?
+            .parse()?;
         let patch = if let Some(content) = items.next() {
             Some(content.parse()?)
-        } else { None };
+        } else {
+            None
+        };
 
         Ok(Version(major, minor, patch))
     }
@@ -91,7 +101,9 @@ impl std::str::FromStr for Orientation {
             "isometric" => Ok(Isometric),
             "staggered" => Ok(Staggered),
             "hexagonal" => Ok(Hexagonal),
-            _ => Err(Error::ParseError(format!("Invalid orientation '{}'", s).into()))
+            _ => Err(Error::ParseError(
+                format!("Invalid orientation '{}'", s).into(),
+            )),
         }
     }
 }
@@ -114,7 +126,9 @@ impl std::str::FromStr for Renderorder {
             "right-up" => Ok(RightUp),
             "left-down" => Ok(LeftDown),
             "left-up" => Ok(LeftUp),
-            _ => Err(Error::ParseError(format!("Invalid render order '{}'", s).into()))
+            _ => Err(Error::ParseError(
+                format!("Invalid render order '{}'", s).into(),
+            )),
         }
     }
 }
@@ -131,20 +145,25 @@ pub struct Color(u32);
 
 impl Color {
     pub fn from_argb(a: u8, r: u8, g: u8, b: u8) -> Self {
-        Color(
-              (a as u32) << 24
-            | (r as u32) << 16
-            | (g as u32) << 8
-            | (b as u32) << 0
-        )
+        Color((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | (b as u32) << 0)
     }
 
-    pub fn alpha(&self) -> u8 { ((self.0 >> 24) & 0xFF) as u8 }
-    pub fn red(&self)   -> u8 { ((self.0 >> 16) & 0xFF) as u8 }
-    pub fn green(&self) -> u8 { ((self.0 >>  8) & 0xFF) as u8 }
-    pub fn blue(&self)  -> u8 { ((self.0 >>  0) & 0xFF) as u8 }
+    pub fn alpha(&self) -> u8 {
+        ((self.0 >> 24) & 0xFF) as u8
+    }
+    pub fn red(&self) -> u8 {
+        ((self.0 >> 16) & 0xFF) as u8
+    }
+    pub fn green(&self) -> u8 {
+        ((self.0 >> 8) & 0xFF) as u8
+    }
+    pub fn blue(&self) -> u8 {
+        ((self.0 >> 0) & 0xFF) as u8
+    }
 
-    pub fn to_u32(&self) -> u32 { self.0 }
+    pub fn to_u32(&self) -> u32 {
+        self.0
+    }
 }
 
 impl std::str::FromStr for Color {
@@ -161,22 +180,21 @@ impl std::str::FromStr for Color {
     /// ```
     fn from_str(s: &str) -> Result<Self> {
         use Error::*;
-        let make_error = || ParseError(format!("Invalid color string, expected #AARRGGBB, got '{}'", s).into());
+        let make_error =
+            || ParseError(format!("Invalid color string, expected #AARRGGBB, got '{}'", s).into());
 
-        let s = s
-            .strip_prefix('#')
-            .ok_or_else(make_error)?;
+        let s = s.strip_prefix('#').ok_or_else(make_error)?;
 
         match s.len() {
             8 => {
                 let [a, r, g, b] = u32::from_str_radix(s, 16)?.to_be_bytes();
                 Ok(Color::from_argb(a, r, g, b))
-            },
+            }
             6 => {
                 let [_, r, g, b] = u32::from_str_radix(s, 16)?.to_be_bytes();
                 Ok(Color::from_argb(255, r, g, b))
-            },
-            _ => Err(make_error())
+            }
+            _ => Err(make_error()),
         }
     }
 }
@@ -228,50 +246,68 @@ impl std::str::FromStr for GID {
 }
 
 fn attribute<T>(node: &roxmltree::Node, name: &str) -> Result<T>
-    where T: std::str::FromStr,
-          T::Err: std::error::Error + 'static,
-          Error: From<<T as std::str::FromStr>::Err>
+where
+    T: std::str::FromStr,
+    T::Err: std::error::Error + 'static,
+    Error: From<<T as std::str::FromStr>::Err>,
 {
-    Ok(node.attribute(name).ok_or_else(||{Error::StructureError{
-        tag: node.tag_name().name().to_string(),
-        msg: format!("Required attribute '{}' missing", name)
-    }})?.parse()?)
+    Ok(node
+        .attribute(name)
+        .ok_or_else(|| Error::StructureError {
+            tag: node.tag_name().name().to_string(),
+            msg: format!("Required attribute '{}' missing", name),
+        })?
+        .parse()?)
 }
 
 fn attribute_or<T>(node: &roxmltree::Node, name: &str, alternative: T) -> Result<T>
-    where T: Copy + std::str::FromStr,
-          T::Err: std::error::Error + 'static
+where
+    T: Copy + std::str::FromStr,
+    T::Err: std::error::Error + 'static,
 {
     match node.attribute(name) {
         None => Ok(alternative),
-        Some(text) => text.parse().map_err(|e: T::Err| Error::ParseError(Box::new(e)))
+        Some(text) => text
+            .parse()
+            .map_err(|e: T::Err| Error::ParseError(Box::new(e))),
     }
 }
 
 fn attribute_or_default<T>(node: &roxmltree::Node, name: &str) -> Result<T>
-    where T: Default + std::str::FromStr,
-          T::Err: std::error::Error + 'static
+where
+    T: Default + std::str::FromStr,
+    T::Err: std::error::Error + 'static,
 {
     match node.attribute(name) {
         None => Ok(T::default()),
-        Some(text) => text.parse().map_err(|e: T::Err| Error::ParseError(Box::new(e)))
+        Some(text) => text
+            .parse()
+            .map_err(|e: T::Err| Error::ParseError(Box::new(e))),
     }
 }
 
 impl math::ivec2 {
-    pub(crate) fn from_tmx_or_default(tmx: &roxmltree::Node, x_attr: &str, y_attr: &str) -> Result<Self> {
+    pub(crate) fn from_tmx_or_default(
+        tmx: &roxmltree::Node,
+        x_attr: &str,
+        y_attr: &str,
+    ) -> Result<Self> {
         Ok(Self::new(
             attribute_or_default(tmx, x_attr)?,
-            attribute_or_default(tmx, y_attr)?
+            attribute_or_default(tmx, y_attr)?,
         ))
     }
 }
 
 impl math::fvec2 {
-    pub(crate) fn from_tmx_or_default(tmx: &roxmltree::Node, x_attr: &str, y_attr: &str) -> Result<Self> {
+    pub(crate) fn from_tmx_or_default(
+        tmx: &roxmltree::Node,
+        x_attr: &str,
+        y_attr: &str,
+    ) -> Result<Self> {
         Ok(Self::new(
             attribute_or_default(tmx, x_attr)?,
-            attribute_or_default(tmx, y_attr)?
+            attribute_or_default(tmx, y_attr)?,
         ))
     }
 }
@@ -321,23 +357,30 @@ impl TileSet {
 
         let image_storage;
         use ImageStorage::*;
-        if let Some(image) = data_node.children().filter(|n| n.tag_name().name() == "image").next() {
-            image_storage = SpriteSheet(
-                loader.load_image(image.attribute("source").ok_or_else(|| Error::StructureError{
-                    tag: image.tag_name().name().into(),
-                    msg: "Missing 'source' tag on image".into(),
-                })?)?
-            );
+        if let Some(image) = data_node
+            .children()
+            .filter(|n| n.tag_name().name() == "image")
+            .next()
+        {
+            image_storage =
+                SpriteSheet(loader.load_image(image.attribute("source").ok_or_else(|| {
+                    Error::StructureError {
+                        tag: image.tag_name().name().into(),
+                        msg: "Missing 'source' tag on image".into(),
+                    }
+                })?)?);
         } else {
-            return Err(Error::UnsupportedFeature("Image collection tilesets are not implemented yet".into()))
+            return Err(Error::UnsupportedFeature(
+                "Image collection tilesets are not implemented yet".into(),
+            ));
         }
 
-        Ok(Self{
+        Ok(Self {
             firstgid: attribute(node, "firstgid")?,
             name: attribute(&data_node, "name")?,
             tile_size: math::ivec2::new(
                 attribute(&data_node, "tilewidth")?,
-                attribute(&data_node, "tileheight")?
+                attribute(&data_node, "tileheight")?,
             ),
             spacing: attribute_or_default(&data_node, "spacing")?,
             margin: attribute_or_default(&data_node, "margin")?,
@@ -357,7 +400,7 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
     assert!(data_node.attribute("encoding").is_some());
 
     match data_node.attribute("encoding").unwrap() {
-        "csv" => todo!{"Implement csv parsing"},
+        "csv" => todo! {"Implement csv parsing"},
         "base64" => {
             // helper macro for decoding compressed data using libflate
             macro_rules! decode_with {
@@ -371,29 +414,28 @@ fn read_data_tag(data_node: &roxmltree::Node) -> Result<Vec<u8>> {
             }
 
             let raw_bytes = base64::decode(data_node.text().unwrap_or_default().trim())
-                .map_err(|e| Error::ParseError(Box::new(e)))?
-                ;
+                .map_err(|e| Error::ParseError(Box::new(e)))?;
             let raw_bytes = match data_node.attribute("compression") {
                 None => raw_bytes,
                 Some("zlib") => decode_with!(raw_bytes zlib),
                 Some("gzip") => decode_with!(raw_bytes gzip),
-                Some(compression) => Err(Error::StructureError{
+                Some(compression) => Err(Error::StructureError {
                     tag: data_node.tag_name().name().to_string(),
-                    msg: format!("Unsupported data compression '{}'", compression)
+                    msg: format!("Unsupported data compression '{}'", compression),
                 })?,
             };
             Ok(raw_bytes)
-        },
-        encoding => Err(Error::StructureError{
+        }
+        encoding => Err(Error::StructureError {
             tag: data_node.tag_name().name().to_string(),
-            msg: format!("Unsupported data encoding '{}'", encoding)
-        })
+            msg: format!("Unsupported data encoding '{}'", encoding),
+        }),
     }
 }
 
 /// This enum contains the different types of layers that can be found in a map
 #[non_exhaustive]
-pub enum Layer{
+pub enum Layer {
     /// A layer containing a grid of tiles
     Tile(TileLayer),
 
@@ -414,7 +456,10 @@ pub enum Layer{
 }
 
 impl Layer {
-    pub fn try_from_xml(node: &roxmltree::Node, loader: &mut ResourceManager) -> Option<Result<Self>> {
+    pub fn try_from_xml(
+        node: &roxmltree::Node,
+        loader: &mut ResourceManager,
+    ) -> Option<Result<Self>> {
         use Layer::*;
         match node.tag_name().name() {
             "layer" => Some(TileLayer::from_xml(node).map(|l| Tile(l))),
@@ -433,10 +478,16 @@ pub struct TileIterator<'map, 'layer> {
 }
 
 impl<'map, 'layer> TileIterator<'map, 'layer> {
-    pub(crate) fn new(map: &'map Map, layer: &'layer TileLayer) -> Self { Self { map, layer, pos: math::ivec2::new(0, 0) } }
+    pub(crate) fn new(map: &'map Map, layer: &'layer TileLayer) -> Self {
+        Self {
+            map,
+            layer,
+            pos: math::ivec2::new(0, 0),
+        }
+    }
 }
 
-impl<'a,'b> Iterator for TileIterator<'a,'b> {
+impl<'a, 'b> Iterator for TileIterator<'a, 'b> {
     type Item = (math::ivec2, Option<GID>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -478,9 +529,12 @@ impl GroupLayer {
     pub fn from_xml(node: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
         assert_eq!(node.tag_name().name(), "group");
 
-        let content = node.children().filter_map(|c| Layer::try_from_xml(&c, loader)).collect::<Result<Vec<_>>>();
+        let content = node
+            .children()
+            .filter_map(|c| Layer::try_from_xml(&c, loader))
+            .collect::<Result<Vec<_>>>();
 
-        Ok(Self{
+        Ok(Self {
             id: node.attribute("id").map(|t| t.parse()).transpose()?,
             name: node.attribute("name").unwrap_or_default().to_string(),
             offset: math::ivec2::from_tmx_or_default(node, "offsetx", "offsety")?,
@@ -512,12 +566,11 @@ pub struct TileLayer {
 }
 
 impl TileLayer {
-
     fn parse_data(data_node: &roxmltree::Node) -> Result<Vec<Option<GID>>> {
         assert_eq!(data_node.tag_name().name(), "data");
 
         match data_node.attribute("encoding") {
-            None => todo!{"Tag based tile data loading not yet implemented"},
+            None => todo! {"Tag based tile data loading not yet implemented"},
             Some(_) => {
                 let raw_bytes = read_data_tag(data_node)?;
 
@@ -525,35 +578,38 @@ impl TileLayer {
                 assert!(raw_bytes.len() % BYTE_SIZE == 0);
 
                 // convert chunk of bytes into GIDS (via u32)
-                Ok(
-                    raw_bytes.chunks_exact(BYTE_SIZE)
-                    .map(|c| Some(GID(NonZeroU32::new(u32::from_le_bytes(c.try_into().unwrap()))?)))
-                    .collect()
-                )
+                Ok(raw_bytes
+                    .chunks_exact(BYTE_SIZE)
+                    .map(|c| {
+                        Some(GID(NonZeroU32::new(u32::from_le_bytes(
+                            c.try_into().unwrap(),
+                        ))?))
+                    })
+                    .collect())
             }
         }
     }
 
     pub fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         let map_attr = |name: &str| {
-            tmx.attribute(name).ok_or_else(||{Error::StructureError{
+            tmx.attribute(name).ok_or_else(|| Error::StructureError {
                 tag: tmx.tag_name().name().to_string(),
-                msg: format!("Required attribute '{}' missing", name)
-            }})
+                msg: format!("Required attribute '{}' missing", name),
+            })
         };
-        Ok(Self{
+        Ok(Self {
             id: tmx.attribute("id").map(|t| t.parse()).transpose()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
-            size: math::ivec2::new(
-                map_attr("width")?.parse()?,
-                map_attr("height")?.parse()?
-            ),
+            size: math::ivec2::new(map_attr("width")?.parse()?, map_attr("height")?.parse()?),
             tintcolor: attribute_or(tmx, "tintcolor", Color::from_argb(255, 255, 255, 255))?,
-            tiles: Self::parse_data(&tmx.children().find(|n| n.tag_name().name() == "data").unwrap())?,
+            tiles: Self::parse_data(
+                &tmx.children()
+                    .find(|n| n.tag_name().name() == "data")
+                    .unwrap(),
+            )?,
             properties: PropertyContainer::from_xml(tmx)?,
         })
     }
-
 
     /// Iterate over the tiles inside of this layer in the order in which they would be rendered.
     /// See [Map::renderorder]. This iterator yields the GID and xy coordinates of the tiles in the
@@ -600,13 +656,13 @@ impl ObjectLayer {
     pub fn from_xml(tmx: &roxmltree::Node, loader: &mut ResourceManager) -> Result<Self> {
         assert_eq!(tmx.tag_name().name(), "objectgroup");
 
-        let content = tmx.children()
+        let content = tmx
+            .children()
             .filter(|t| t.tag_name().name() == "object")
             .map(|t| Object::from_xml(&t, loader))
-            .collect::<Result<_>>()?
-        ;
+            .collect::<Result<_>>()?;
 
-        Ok(Self{
+        Ok(Self {
             id: tmx.attribute("id").map(|t| t.parse()).transpose()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
             color: attribute_or(tmx, "color", Color::from_argb(255, 160, 160, 164))?,
@@ -618,7 +674,6 @@ impl ObjectLayer {
             properties: PropertyContainer::from_xml(tmx)?,
         })
     }
-
 }
 
 /// An element of an [ObjectLayer].
@@ -642,7 +697,6 @@ pub struct Object {
 }
 
 impl Object {
-
     fn new(id: usize) -> Self {
         Object {
             id,
@@ -662,18 +716,30 @@ impl Object {
     fn fill_from_xml(&mut self, tmx: &roxmltree::Node) -> Result<()> {
         assert_eq!(tmx.tag_name().name(), "object");
 
-        if let Some(id) = tmx.attribute("id") { self.id = id.parse()?; }
-        if let Some(name) = tmx.attribute("name") { self.name = name.parse()?; }
-        if let Some(type_) = tmx.attribute("type_") { self.type_ = type_.parse()?; }
+        if let Some(id) = tmx.attribute("id") {
+            self.id = id.parse()?;
+        }
+        if let Some(name) = tmx.attribute("name") {
+            self.name = name.parse()?;
+        }
+        if let Some(type_) = tmx.attribute("type_") {
+            self.type_ = type_.parse()?;
+        }
         if tmx.attribute("x").is_some() || tmx.attribute("y").is_some() {
             self.pos = math::fvec2::from_tmx_or_default(tmx, "x", "y")?;
         }
         if tmx.attribute("width").is_some() || tmx.attribute("height").is_some() {
             self.size = math::fvec2::from_tmx_or_default(tmx, "width", "height")?;
         }
-        if let Some(rotation) = tmx.attribute("rotation") { self.rotation = rotation.parse()?; }
-        if let Some(tile_id) = tmx.attribute("tile_id") { self.tile_id = Some(tile_id.parse()?); }
-        if let Some(visible) = tmx.attribute("visible") { self.visible = visible.parse()?; }
+        if let Some(rotation) = tmx.attribute("rotation") {
+            self.rotation = rotation.parse()?;
+        }
+        if let Some(tile_id) = tmx.attribute("tile_id") {
+            self.tile_id = Some(tile_id.parse()?);
+        }
+        if let Some(visible) = tmx.attribute("visible") {
+            self.visible = visible.parse()?;
+        }
 
         let kind = ObjectKind::from_xml(tmx)?;
         if !matches!(kind, ObjectKind::Rect) {
@@ -690,10 +756,10 @@ impl Object {
         assert_eq!(tmx.tag_name().name(), "object");
 
         let map_attr = |name: &str| {
-            tmx.attribute(name).ok_or_else(||{Error::StructureError{
+            tmx.attribute(name).ok_or_else(|| Error::StructureError {
                 tag: tmx.tag_name().name().to_string(),
-                msg: format!("Required attribute '{}' missing", name)
-            }})
+                msg: format!("Required attribute '{}' missing", name),
+            })
         };
 
         let id = map_attr("id")?.parse()?;
@@ -719,10 +785,10 @@ pub enum ObjectKind {
     Ellipse,
     Point,
     Polygon {
-        points: Vec<math::fvec2>
+        points: Vec<math::fvec2>,
     },
     Polyline {
-        points: Vec<math::fvec2>
+        points: Vec<math::fvec2>,
     },
     Text {
         content: String,
@@ -738,7 +804,9 @@ pub enum ObjectKind {
     },
 }
 
-trait AsPointListExt { fn as_point_list(&self) -> Result<Vec<math::fvec2>>; }
+trait AsPointListExt {
+    fn as_point_list(&self) -> Result<Vec<math::fvec2>>;
+}
 
 impl AsPointListExt for &str {
     fn as_point_list(&self) -> Result<Vec<math::fvec2>> {
@@ -746,9 +814,11 @@ impl AsPointListExt for &str {
         for point in self.split_ascii_whitespace() {
             let mut coords = point.split(',');
             if let (Some(x), Some(y), None) = (coords.next(), coords.next(), coords.next()) {
-                points.push(math::fvec2::new(x.parse()?,y.parse()?));
+                points.push(math::fvec2::new(x.parse()?, y.parse()?));
             } else {
-                return Err(Error::ParseError(format!("{} is not a valid point", point).into()));
+                return Err(Error::ParseError(
+                    format!("{} is not a valid point", point).into(),
+                ));
             }
         }
         Ok(points)
@@ -757,8 +827,8 @@ impl AsPointListExt for &str {
 
 impl ObjectKind {
     fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
-        use ObjectKind::*;
         use Error::StructureError;
+        use ObjectKind::*;
         for child in tmx.children() {
             match child.tag_name().name() {
                 "ellipse" => return Ok(Ellipse),
@@ -766,12 +836,11 @@ impl ObjectKind {
                 poly @ ("polygon" | "polyline") => {
                     let points = child
                         .attribute("points")
-                        .ok_or(StructureError{
+                        .ok_or(StructureError {
                             tag: child.tag_name().name().into(),
-                            msg: "Missing attribute points".into()
+                            msg: "Missing attribute points".into(),
                         })?
-                        .as_point_list()?
-                    ;
+                        .as_point_list()?;
                     return Ok(match poly {
                         "polygon" => Polygon { points },
                         "polyline" => Polyline { points },
@@ -790,7 +859,7 @@ impl ObjectKind {
                         strikeout: attribute_or_default(tmx, "strikeout")?,
                         kerning: attribute_or_default(tmx, "kerning")?,
                     });
-                },
+                }
                 _ => continue,
             }
         }
@@ -812,7 +881,7 @@ pub struct ImageLayer {
 
 impl ImageLayer {
     fn from_xml(tmx: &roxmltree::Node, _loader: &mut ResourceManager) -> Result<Self> {
-        Ok(ImageLayer{
+        Ok(ImageLayer {
             id: tmx.attribute("id").map(|t| t.parse()).transpose()?,
             name: tmx.attribute("name").unwrap_or_default().to_string(),
             offset: math::ivec2::from_tmx_or_default(tmx, "offsetx", "offsety")?,
@@ -823,7 +892,6 @@ impl ImageLayer {
         })
     }
 }
-
 
 /// The Map struct is the top level container for all relevant data inside of a Tiled map.
 /// A Map consists of [TileSets](TileSet) and [Layers](Layer).
@@ -856,7 +924,10 @@ impl Map {
         Self::from_file_with_loader(path, &mut ResourceManager::default())
     }
 
-    pub fn from_file_with_loader(path: &std::path::Path, resource_manager: &mut ResourceManager) -> Result<Self> {
+    pub fn from_file_with_loader(
+        path: &std::path::Path,
+        resource_manager: &mut ResourceManager,
+    ) -> Result<Self> {
         let mut file = File::open(path)?;
 
         // TODO(texel, 2021-11-10): Change to use resource manager
@@ -874,42 +945,46 @@ impl Map {
         let map_node = document.root_element();
 
         if map_node.tag_name().name() != "map" {
-            return Err(Error::StructureError{
+            return Err(Error::StructureError {
                 tag: map_node.tag_name().name().to_string(),
-                msg: format!("Expected tag 'map' at root level, got '{}'.", map_node.tag_name().name())
+                msg: format!(
+                    "Expected tag 'map' at root level, got '{}'.",
+                    map_node.tag_name().name()
+                ),
             });
         }
 
         let map_attr = |name: &str| {
-            map_node.attribute(name).ok_or_else(||{Error::StructureError{
-                tag: map_node.tag_name().name().to_string(),
-                msg: format!("Required attribute '{}' missing", name)
-            }})
+            map_node
+                .attribute(name)
+                .ok_or_else(|| Error::StructureError {
+                    tag: map_node.tag_name().name().to_string(),
+                    msg: format!("Required attribute '{}' missing", name),
+                })
         };
 
-        let tilesets = map_node.children()
+        let tilesets = map_node
+            .children()
             .filter(|n| n.tag_name().name() == "tileset")
             .map(|n| TileSet::from_xml(&n, resource_manager))
-            .collect::<Result<Vec<_>>>()?
-        ;
+            .collect::<Result<Vec<_>>>()?;
 
         let mut map = Map {
             version: map_attr("version")?.parse()?,
             editor_version: None,
             orientation: map_attr("orientation")?.parse()?,
             renderorder: attribute_or_default(&map_node, "renderorder")?,
-            size: math::ivec2::new(
-                map_attr("width")?.parse()?,
-                map_attr("height")?.parse()?
-            ),
+            size: math::ivec2::new(map_attr("width")?.parse()?, map_attr("height")?.parse()?),
             tile_size: math::ivec2::new(
                 map_attr("tilewidth")?.parse()?,
-                map_attr("tileheight")?.parse()?
+                map_attr("tileheight")?.parse()?,
             ),
             tilesets,
             backgroundcolor: attribute_or_default(&map_node, "backgroundcolor")?,
-            layers:
-                map_node.children().filter_map(|c| Layer::try_from_xml(&c, resource_manager)).collect::<Result<Vec<_>>>()?,
+            layers: map_node
+                .children()
+                .filter_map(|c| Layer::try_from_xml(&c, resource_manager))
+                .collect::<Result<Vec<_>>>()?,
             properties: PropertyContainer::from_xml(&map_node)?,
         };
         if map_node.attribute("tiledversion").is_some() {
@@ -934,12 +1009,13 @@ impl Map {
 
         let lid = (id.to_id() - tileset.firstgid.to_id()) as i32;
         let tile_id = ivec2::new(lid % tileset.columns as i32, lid / tileset.columns as i32);
-        let upper_left = ivec2::new(tileset.margin as i32, tileset.margin as i32) + tile_id * stride;
+        let upper_left =
+            ivec2::new(tileset.margin as i32, tileset.margin as i32) + tile_id * stride;
 
         match &tileset.image {
             ImageStorage::SpriteSheet(spritesheet) => {
                 Some((&**spritesheet, math::Rect::new(upper_left, size)))
-            },
+            }
         }
     }
 
@@ -967,17 +1043,21 @@ impl Map {
     ///     }
     /// }
     /// ```
-    pub fn iter_layers(&self) -> impl Iterator<Item=(&Layer, usize)> {
+    pub fn iter_layers(&self) -> impl Iterator<Item = (&Layer, usize)> {
         LayerIterator::new(&self.layers)
     }
 }
 
 struct LayerIterator<'a> {
-    iter_stack: Vec<std::slice::Iter<'a, Layer>>
+    iter_stack: Vec<std::slice::Iter<'a, Layer>>,
 }
 
 impl<'a> LayerIterator<'a> {
-    fn new(layers: &'a [Layer]) -> Self { Self { iter_stack: vec![layers.iter()] } }
+    fn new(layers: &'a [Layer]) -> Self {
+        Self {
+            iter_stack: vec![layers.iter()],
+        }
+    }
 }
 
 impl<'a> Iterator for LayerIterator<'a> {
@@ -1000,16 +1080,14 @@ impl<'a> Iterator for LayerIterator<'a> {
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn test_version_parsing() -> Result<()> {
-        assert_eq!("1.0".parse::<Version>()?, Version(1,0,None));
-        assert_eq!("4.5.3".parse::<Version>()?, Version(4,5,Some(3)));
+        assert_eq!("1.0".parse::<Version>()?, Version(1, 0, None));
+        assert_eq!("4.5.3".parse::<Version>()?, Version(4, 5, Some(3)));
         Ok(())
     }
 
@@ -1042,16 +1120,28 @@ mod test {
     fn test_layer_iterator() {
         use Layer::*;
         macro_rules! layer {
-            (tile) => {Tile(TileLayer{
-                id: Some(0), name: "".into(), size: math::ivec2::new(0,0),
-                tintcolor: Color::default(), tiles: vec![],
-                properties: PropertyContainer::new(),
-            })};
-            (group $layers:expr) => {Group(GroupLayer{
-                id: Some(0), name: "".into(), offset: math::ivec2::new(0,0),
-                opacity: 0., tintcolor: Color::default(), visible:false,
-                content: $layers, properties: PropertyContainer::new(),
-            })};
+            (tile) => {
+                Tile(TileLayer {
+                    id: Some(0),
+                    name: "".into(),
+                    size: math::ivec2::new(0, 0),
+                    tintcolor: Color::default(),
+                    tiles: vec![],
+                    properties: PropertyContainer::new(),
+                })
+            };
+            (group $layers:expr) => {
+                Group(GroupLayer {
+                    id: Some(0),
+                    name: "".into(),
+                    offset: math::ivec2::new(0, 0),
+                    opacity: 0.,
+                    tintcolor: Color::default(),
+                    visible: false,
+                    content: $layers,
+                    properties: PropertyContainer::new(),
+                })
+            };
         }
 
         let layers = vec![
@@ -1081,8 +1171,14 @@ mod test {
 
     #[test]
     fn test_color_parsing() {
-        assert_eq!(Color::from_argb(255,255,255,255), "#FFFFFFFF".parse().unwrap());
-        assert_eq!(Color::from_argb(255,  0,255,255),   "#00FFFF".parse().unwrap());
+        assert_eq!(
+            Color::from_argb(255, 255, 255, 255),
+            "#FFFFFFFF".parse().unwrap()
+        );
+        assert_eq!(
+            Color::from_argb(255, 0, 255, 255),
+            "#00FFFF".parse().unwrap()
+        );
 
         // missing hashtag (#)
         assert!("00FFFF".parse::<Color>().is_err());

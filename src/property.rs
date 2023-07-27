@@ -12,7 +12,7 @@ pub struct ObjectReference(i64);
 fn parse_string_value<'a>(tmx: &'a roxmltree::Node) -> &'a str {
     match tmx.attribute("value") {
         Some(text) => text,
-        None => tmx.text().unwrap_or_default()
+        None => tmx.text().unwrap_or_default(),
     }
 }
 
@@ -36,7 +36,10 @@ impl PropertyValue {
         // Helper to parse a value if the attribute "value" exists or return the default if not
         macro_rules! parse {
             () => {
-                tmx.attribute("value").map(|t| t.parse()).transpose()?.unwrap_or_default()
+                tmx.attribute("value")
+                    .map(|t| t.parse())
+                    .transpose()?
+                    .unwrap_or_default()
             };
         }
 
@@ -48,14 +51,14 @@ impl PropertyValue {
             "color" => Ok(Color(parse!())),
             "file" => Ok(File(tmx.attribute("value").unwrap_or_default().into())),
             "object" => Ok(Object(ObjectReference(parse!()))),
-            other => Err(Error::StructureError{
-                    tag: tmx.tag_name().name().into(),
-                    msg: format!(
-                        "Unknown property type '{}' for property '{}'",
-                        other,
-                        tmx.attribute("name").unwrap_or("")
-                    ),
-                }),
+            other => Err(Error::StructureError {
+                tag: tmx.tag_name().name().into(),
+                msg: format!(
+                    "Unknown property type '{}' for property '{}'",
+                    other,
+                    tmx.attribute("name").unwrap_or("")
+                ),
+            }),
         }
     }
 }
@@ -73,7 +76,7 @@ impl Property {
     pub fn as_str(&self) -> Result<&str> {
         match &self.value {
             PropertyValue::String(text) => Ok(&text),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
 
@@ -83,7 +86,7 @@ impl Property {
     pub fn as_i64(&self) -> Result<i64> {
         match &self.value {
             PropertyValue::Int(val) => Ok(*val),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
 
@@ -93,10 +96,9 @@ impl Property {
     pub fn as_f64(&self) -> Result<f64> {
         match &self.value {
             PropertyValue::Float(val) => Ok(*val),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
-
 
     /// Try to get the value of this property as a [bool].
     ///
@@ -104,7 +106,7 @@ impl Property {
     pub fn as_bool(&self) -> Result<bool> {
         match &self.value {
             PropertyValue::Bool(val) => Ok(*val),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
 
@@ -114,7 +116,7 @@ impl Property {
     pub fn as_color(&self) -> Result<Color> {
         match &self.value {
             PropertyValue::Color(val) => Ok(*val),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
 
@@ -125,7 +127,7 @@ impl Property {
     pub fn as_file(&self) -> Result<&str> {
         match &self.value {
             PropertyValue::File(val) => Ok(val),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
 
@@ -135,7 +137,7 @@ impl Property {
     pub fn as_object_ref(&self) -> Result<ObjectReference> {
         match &self.value {
             PropertyValue::Object(val) => Ok(*val),
-            _ => Err(Error::PropertyTypeError)
+            _ => Err(Error::PropertyTypeError),
         }
     }
 }
@@ -146,8 +148,11 @@ pub struct PropertyContainer {
 }
 
 impl PropertyContainer {
-
-    pub(crate) fn new() -> Self { Self{ properties: HashMap::new() } }
+    pub(crate) fn new() -> Self {
+        Self {
+            properties: HashMap::new(),
+        }
+    }
 
     pub(crate) fn from_xml(tmx: &roxmltree::Node) -> Result<Self> {
         let mut this = Self::new();
@@ -169,20 +174,26 @@ impl PropertyContainer {
         }
         let properties = properties.unwrap();
 
-        for property in properties.children().filter(|c| c.tag_name().name() == "property") {
+        for property in properties
+            .children()
+            .filter(|c| c.tag_name().name() == "property")
+        {
             let name = match property.attribute("name") {
                 Some(name) => name,
-                None => return Err(
-                    Error::StructureError{
+                None => {
+                    return Err(Error::StructureError {
                         tag: property.tag_name().name().into(),
-                        msg: format!("Property is missing a name!")
-                    }
-                )
+                        msg: format!("Property is missing a name!"),
+                    })
+                }
             };
 
             self.properties.insert(
                 name.to_string(),
-                Property{name: name.into(), value: PropertyValue::from_xml(&property)?}
+                Property {
+                    name: name.into(),
+                    value: PropertyValue::from_xml(&property)?,
+                },
             );
         }
 
@@ -190,7 +201,7 @@ impl PropertyContainer {
     }
 
     /// Iterate over all the properties stored in this container.
-    pub fn iter(&self) -> impl Iterator<Item=&Property> {
+    pub fn iter(&self) -> impl Iterator<Item = &Property> {
         self.properties.values()
     }
 }
@@ -206,7 +217,6 @@ impl std::ops::Index<&str> for PropertyContainer {
         &self.properties[index].value
     }
 }
-
 
 #[cfg(test)]
 mod test {
@@ -236,10 +246,22 @@ mod test {
         assert_eq!(
             properties,
             vec![
-                &Property{name: "all_defaults".into(), value: String("".into())},
-                &Property{name: "string_value".into(), value: String("Hello".into())},
-                &Property{name: "color_value".into(), value: Color(crate::Color::from_argb(0xFF, 0xFF, 0xCC, 0x00))},
-                &Property{name: "contained_text".into(), value: String("Hello World".into())},
+                &Property {
+                    name: "all_defaults".into(),
+                    value: String("".into())
+                },
+                &Property {
+                    name: "string_value".into(),
+                    value: String("Hello".into())
+                },
+                &Property {
+                    name: "color_value".into(),
+                    value: Color(crate::Color::from_argb(0xFF, 0xFF, 0xCC, 0x00))
+                },
+                &Property {
+                    name: "contained_text".into(),
+                    value: String("Hello World".into())
+                },
             ]
         );
     }

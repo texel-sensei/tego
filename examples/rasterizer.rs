@@ -1,25 +1,27 @@
+use image::{GenericImage, GenericImageView, RgbaImage};
 use std::{error::Error, path::Path};
-use image::{RgbaImage, GenericImageView, GenericImage};
 
 struct ImageLoader {}
 
 impl ImageLoader {
-    fn new() -> Self { Self {  } }
+    fn new() -> Self {
+        Self {}
+    }
 }
 
 impl tego::ImageLoader for ImageLoader {
     fn load(&mut self, path: &str) -> tego::Result<Box<dyn std::any::Any>> {
-        let image =
-            image::open(Path::new(path))
+        let image = image::open(Path::new(path))
             .map_err(|e| tego::Error::ParseError(Box::new(e)))?
-            .to_rgba8()
-        ;
+            .to_rgba8();
         Ok(Box::new(image))
     }
 }
 
 fn render_layer(
-    map: &tego::Map, layer: &tego::TileLayer, buffer: &mut RgbaImage
+    map: &tego::Map,
+    layer: &tego::TileLayer,
+    buffer: &mut RgbaImage,
 ) -> Result<(), Box<dyn Error>> {
     for (pos, gid) in layer.tiles_in_renderorder(map).filter(|t| t.1.is_some()) {
         let (img_path, src_rect) = map.tile_image(gid.unwrap()).unwrap();
@@ -27,16 +29,15 @@ fn render_layer(
         let tile_image = img_path.downcast_ref::<RgbaImage>().unwrap();
 
         let tile_sprite = tile_image.view(
-            src_rect.upper_left.x as u32, src_rect.upper_left.y as u32,
-            src_rect.size.x as u32, src_rect.size.y as u32
+            src_rect.upper_left.x as u32,
+            src_rect.upper_left.y as u32,
+            src_rect.size.x as u32,
+            src_rect.size.y as u32,
         );
 
-        let origin = pos *  map.tile_size;
+        let origin = pos * map.tile_size;
 
-        buffer.copy_from(
-            &tile_sprite,
-            origin.x as u32, origin.y as u32
-        )?;
+        buffer.copy_from(&tile_sprite, origin.x as u32, origin.y as u32)?;
     }
     Ok(())
 }
@@ -51,7 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = &args[1];
     let output = &args[2];
 
-    let mut loader = tego::ResourceManager::new(ImageLoader::new(), tego::FileProvider{});
+    let mut loader = tego::ResourceManager::new(ImageLoader::new(), tego::FileProvider {});
     let map = tego::Map::from_file_with_loader(Path::new(input), &mut loader)?;
 
     let resolution = map.size * map.tile_size;

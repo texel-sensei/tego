@@ -20,18 +20,31 @@ fn main() -> tego::Result<()> {
         use tego::Layer::*;
         match layer {
             Tile(layer) => {
-                println!("Layer '{}' with {}x{} tiles", layer.name, layer.size.x, layer.size.y);
-            },
+                println!(
+                    "Layer '{}' with {}x{} tiles",
+                    layer.name, layer.size.x, layer.size.y
+                );
+            }
             Group(layer) => {
-                println!("Group layer '{}' with {} sub-layers", layer.name, layer.content.len());
+                println!(
+                    "Group layer '{}' with {} sub-layers",
+                    layer.name,
+                    layer.content.len()
+                );
 
                 // increase indentation for all layers part of this group
                 indent += 1;
-            },
+            }
             Object(layer) => {
-                println!("Layer '{}' containing {} objects", layer.name, layer.content.len());
-            },
-            _ => { println!("Unknown layer");}
+                println!(
+                    "Layer '{}' containing {} objects",
+                    layer.name,
+                    layer.content.len()
+                );
+            }
+            _ => {
+                println!("Unknown layer");
+            }
         }
     }
     Ok(())

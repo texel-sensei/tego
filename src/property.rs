@@ -75,7 +75,7 @@ impl Property {
     /// Returns a [Error::PropertyTypeError] if it contains a different type.
     pub fn as_str(&self) -> Result<&str> {
         match &self.value {
-            PropertyValue::String(text) => Ok(&text),
+            PropertyValue::String(text) => Ok(text),
             _ => Err(Error::PropertyTypeError),
         }
     }
@@ -183,7 +183,7 @@ impl PropertyContainer {
                 None => {
                     return Err(Error::StructureError {
                         tag: property.tag_name().name().into(),
-                        msg: format!("Property is missing a name!"),
+                        msg: "Property is missing a name!".to_owned(),
                     })
                 }
             };

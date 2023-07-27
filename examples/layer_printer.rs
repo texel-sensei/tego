@@ -1,5 +1,4 @@
 use std::path::Path;
-extern crate tego;
 
 fn main() -> tego::Result<()> {
     // Load a tmx file.

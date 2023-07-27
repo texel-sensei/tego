@@ -24,7 +24,6 @@ Load a map and pretty print the layers included in it:
 
 ```rust
 use std::path::Path;
-extern crate tego;
 
 fn main() -> tego::Result<()> {
     // Load a tmx file.

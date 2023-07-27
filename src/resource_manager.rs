@@ -42,14 +42,14 @@ impl ResourceManager {
 
     pub fn load_object_template(&mut self, relpath: &str) -> Result<Object> {
         let path = format!("{}/{}", &self.base_path, relpath);
-        let entry = self.template_cache.entry(path.clone());
+        let entry = self.template_cache.entry(path);
         use std::collections::hash_map::Entry::*;
         Ok(match entry {
             Occupied(slot) => slot.get().clone(),
             Vacant(slot) => {
                 // inlined self.load_text to make the borrow checker happy
                 let template_text = {
-                    let data = self.file_provider.read(&self.base_path, &relpath)?;
+                    let data = self.file_provider.read(&self.base_path, relpath)?;
                     Ok::<_, Error>(
                         String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))?,
                     )
@@ -75,7 +75,7 @@ impl ResourceManager {
 
     pub fn load_text(&mut self, path: &str) -> Result<String> {
         let data = self.file_provider.read(&self.base_path, path)?;
-        Ok(String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))?)
+        String::from_utf8(data).map_err(|e| Error::ParseError(Box::new(e)))
     }
 
     /// Get a reference to the resource manager's base path.

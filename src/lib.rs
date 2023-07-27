@@ -26,7 +26,6 @@ use std::any::Any;
 use std::rc::Rc;
 use std::{fs::File, io::Read};
 
-use base64;
 use roxmltree::Document;
 
 #[macro_use]
@@ -108,8 +107,9 @@ impl std::str::FromStr for Orientation {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
 pub enum Renderorder {
+    #[default]
     RightDown,
     RightUp,
     LeftDown,
@@ -133,19 +133,13 @@ impl std::str::FromStr for Renderorder {
     }
 }
 
-impl Default for Renderorder {
-    fn default() -> Self {
-        Renderorder::RightDown
-    }
-}
-
 /// An 8 bit RGB color with alpha value.
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Default)]
 pub struct Color(u32);
 
 impl Color {
     pub fn from_argb(a: u8, r: u8, g: u8, b: u8) -> Self {
-        Color((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | (b as u32) << 0)
+        Color((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | (b as u32) )
     }
 
     pub fn alpha(&self) -> u8 {
@@ -158,7 +152,7 @@ impl Color {
         ((self.0 >> 8) & 0xFF) as u8
     }
     pub fn blue(&self) -> u8 {
-        ((self.0 >> 0) & 0xFF) as u8
+        (self.0 & 0xFF) as u8
     }
 
     pub fn to_u32(&self) -> u32 {
@@ -359,8 +353,7 @@ impl TileSet {
         use ImageStorage::*;
         if let Some(image) = data_node
             .children()
-            .filter(|n| n.tag_name().name() == "image")
-            .next()
+            .find(|n| n.tag_name().name() == "image")
         {
             image_storage =
                 SpriteSheet(loader.load_image(image.attribute("source").ok_or_else(|| {
@@ -462,10 +455,10 @@ impl Layer {
     ) -> Option<Result<Self>> {
         use Layer::*;
         match node.tag_name().name() {
-            "layer" => Some(TileLayer::from_xml(node).map(|l| Tile(l))),
-            "group" => Some(GroupLayer::from_xml(node, loader).map(|l| Group(l))),
-            "objectgroup" => Some(ObjectLayer::from_xml(node, loader).map(|l| Object(l))),
-            "imagelayer" => Some(ImageLayer::from_xml(node, loader).map(|l| Image(l))),
+            "layer" => Some(TileLayer::from_xml(node).map(Tile)),
+            "group" => Some(GroupLayer::from_xml(node, loader).map(Group)),
+            "objectgroup" => Some(ObjectLayer::from_xml(node, loader).map(Object)),
+            "imagelayer" => Some(ImageLayer::from_xml(node, loader).map(Image)),
             _ => None,
         }
     }
@@ -620,7 +613,7 @@ impl TileLayer {
     /// At the moment, this function is only implemented for a renderorder of RightDown.
     /// Other render orders result in a panic.
     pub fn tiles_in_renderorder<'a, 'b>(&'b self, map: &'a Map) -> TileIterator<'a, 'b> {
-        TileIterator::new(map, &self)
+        TileIterator::new(map, self)
     }
 }
 
@@ -940,7 +933,7 @@ impl Map {
 
     /// Parse a map from xml data
     pub fn from_xml_str(tmx: &str, resource_manager: &mut ResourceManager) -> Result<Self> {
-        let document = Document::parse(&tmx)?;
+        let document = Document::parse(tmx)?;
 
         let map_node = document.root_element();
 
@@ -1105,7 +1098,7 @@ mod test {
             />
         "#;
 
-        let map = Map::from_xml_str(&map_xml, &mut ResourceManager::default())?;
+        let map = Map::from_xml_str(map_xml, &mut ResourceManager::default())?;
         assert_eq!(map.renderorder, Renderorder::RightDown);
         Ok(())
     }

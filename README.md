@@ -22,7 +22,7 @@ but not at the expense of flexibility.
 
 Load a map and pretty print the layers included in it:
 
-```rust
+```rust,no_run
 use std::path::Path;
 
 fn main() -> tego::Result<()> {
@@ -55,6 +55,10 @@ fn main() -> tego::Result<()> {
             Object(layer) => {
                 println!("Layer '{}' containing {} objects", layer.name, layer.content.len());
             },
+
+            _ => {
+                println!("Unknown layertype");
+            }
         }
     }
     Ok(())

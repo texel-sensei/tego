@@ -139,7 +139,7 @@ pub struct Color(u32);
 
 impl Color {
     pub fn from_argb(a: u8, r: u8, g: u8, b: u8) -> Self {
-        Color((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | (b as u32) )
+        Color((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | (b as u32))
     }
 
     pub fn alpha(&self) -> u8 {
@@ -1186,3 +1186,7 @@ mod test {
         assert!("#FQ00FF".parse::<Color>().is_err());
     }
 }
+
+#[doc(hidden)]
+#[doc = include_str!("../README.md")]
+fn __test_readme() {}
